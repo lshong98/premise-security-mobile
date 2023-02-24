@@ -4,10 +4,10 @@
     "slug": "premise-security-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/images/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,13 +18,19 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.swinburne.tpsapp",
+      "buildNumber": "1.0.9",
+      "supportsTablet": true,
+      "infoPlist":{
+        "NSCameraUsageDescription": "This app uses the camera to scan barcodes and take pictures of users' face.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow the app to use your location",
+        "NSLocationAlwaysUsageDescription": "Allow the app to use your location",
+        "NSLocationWhenInUseUsageDescription": "Allow the app to use your location"
+      }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
-      }
+      "package": "com.swinburne.tpsapp",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"

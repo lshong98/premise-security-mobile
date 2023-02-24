@@ -1,0 +1,3 @@
+Original library belongs to https://github.com/UnPourTous/react-native-search-list
+
+This is a custom writeup for personal projects.
