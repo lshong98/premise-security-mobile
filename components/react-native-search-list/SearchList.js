@@ -60,7 +60,7 @@ export default class SearchList extends Component {
     titleTextColor: PropTypes.string,
 
     cancelTitle: PropTypes.string,
-    cancelTextColor: 'black',
+    cancelTextColor: PropTypes.string,
 
     // use `renderSectionIndexItem` to get much more freedom
     sectionIndexTextColor: PropTypes.string,
@@ -127,7 +127,7 @@ export default class SearchList extends Component {
     return dataBlob[sectionID + ':' + rowID]
   }
 
-  componentWillReceiveProps (nextProps) {
+  UNSAFE_componentWillReceiveProps (nextProps) {
     if (nextProps && this.props.data !== nextProps.data) {
       this.initList(nextProps.data)
     }

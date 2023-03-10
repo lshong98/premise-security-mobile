@@ -1,15 +1,8 @@
-import React, {useCallback, useEffect, useState} from 'react';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { Alert, StyleSheet, LogBox, SafeAreaView } from 'react-native';
+import React, {useCallback, useEffect, useState} from 'react'
+import { Alert, StyleSheet, LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font'
-
-import { Text, View } from 'react-native';
 
 
 import HomeNavigation from './navigation/HomeNavigation';
@@ -24,6 +17,8 @@ if (!global.btoa) {  global.btoa = encode }
 if (!global.atob) { global.atob = decode }
 
 LogBox.ignoreLogs(['Setting a timer']);
+LogBox.ignoreLogs(['Warning: ...']);
+LogBox.ignoreAllLogs();
 
 export default function App(){
   const [isLoadingComplete, setIsLoadingComplete] = useState(false);
@@ -36,6 +31,7 @@ export default function App(){
   useEffect(()=>{
     async function prepare() {
       try{
+        await SplashScreen.preventAutoHideAsync();
         await Font.loadAsync({
           'open-sans-regular': require('./assets/fonts/OpenSans-Regular.ttf'),
           'roboto-regular': require('./assets/fonts/Roboto-Regular.ttf'),
@@ -67,7 +63,7 @@ export default function App(){
         .doc(user.email)
         .get()
         .then((doc) => {
-          if (doc.data().mobileapp_permission) {
+          if (doc.data()?.mobileapp_permission) {
             setIsAuthenticated(user);
           } else {
             Alert.alert(
@@ -81,11 +77,10 @@ export default function App(){
     }
   };
 
-  const insets = useSafeAreaInsets();
 
   const onLayoutRootView = useCallback(async () => {
     if (isLoadingComplete && isAuthenticationReady) {
-      await SplashScreen.hideAsync();
+      SplashScreen.hideAsync();
     }
   }, [isLoadingComplete, isAuthenticationReady]);
 
@@ -96,16 +91,14 @@ export default function App(){
 
 
     return (
-      <SafeAreaProvider>
-        <NavigationContainer onReady={onLayoutRootView}>
+        <NavigationContainer theme={theme} style={styles.container}  onReady={onLayoutRootView}>
             {
             (isAuthenticated || (firebase.auth().currentUser != null)) ? 
                 <HomeNavigationComponent /> 
             
             : <AuthNavigationComponent /> 
             }
-        </NavigationContainer>
-      </SafeAreaProvider>      
+        </NavigationContainer>  
     );
 
 }
@@ -116,3 +109,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 });
+const theme = {
+  colors: {
+    background: "#fff",
+  },
+};

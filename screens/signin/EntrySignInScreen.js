@@ -82,16 +82,16 @@ export default class EntrySignInScreen extends React.Component {
       }
 
       this.props.navigation.navigate('PictureSignIn', {
-        companyName: navigation.getParam('companyName'),
-        personName: navigation.getParam('personName'),
-        contactNo: navigation.getParam('contactNo'),
+        companyName: this.props.route.params.companyName,
+        personName: this.props.route.params.personName,
+        contactNo: this.props.route.params.contactNo,
         noOfPeople: no_of_people,
         visitPurpose: visit_purpose,
         personMeeting: person_meeting,
         personDepartment: person_department,
         walkinArea: walkin_area,
         from: 'EntrySignIn',
-        isVisitor: navigation.getParam('isVisitor')
+        isVisitor: this.props.route.params.isVisitor
       })
     }
   }
@@ -125,9 +125,9 @@ export default class EntrySignInScreen extends React.Component {
       firebase.firestore()
         .collection('Entries')
         .add({
-          company: navigation.getParam('companyName'),
-          name: navigation.getParam('personName'),
-          contact_no: navigation.getParam('contactNo'),
+          company: this.props.route.params.companyName,
+          name: this.props.route.params.personName,
+          contact_no: this.props.route.params.contactNo,
           no_of_people: no_of_people,
           visit_purpose: visit_purpose,
           host: person_meeting,

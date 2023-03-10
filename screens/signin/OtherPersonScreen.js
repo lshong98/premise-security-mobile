@@ -76,7 +76,7 @@ export default class OtherPersonScreen extends React.Component {
       Alert.alert("Person added to database.")
 
       this.props.navigation.navigate('EntrySignIn', {
-        companyName: props.route.params.companyName,
+        companyName: this.props.route.params.companyName,
         personName: this.state.name,
         contactNo: this.state.contact_no,
         isVisitor: true
@@ -100,7 +100,7 @@ export default class OtherPersonScreen extends React.Component {
         name: this.state.name,
         contact_no: this.state.contact_no,
         email: this.state.email,
-        branch: props.route.params.companyName,
+        branch: this.props.route.params.companyName,
         department: this.state.department,
         sortField: this.state.name.substr(0, 2).toLowerCase()
       }).then(() => {
@@ -113,13 +113,13 @@ export default class OtherPersonScreen extends React.Component {
         
       if(global.internetConnectivity){
         this.props.navigation.navigate('PictureSignIn', {
-          companyName: props.route.params.companyName,
+          companyName: this.props.route.params.companyName,
           contactNo: this.state.contact_no,
           personName: this.state.name,
           isVisitor: false
         })
       } else{
-        this.submitOfflineData(props.route.params.companyName, this.state.contactNo, this.state.name)
+        this.submitOfflineData(this.props.route.params.companyName, this.state.contactNo, this.state.name)
       }
     }
   }
@@ -127,8 +127,8 @@ export default class OtherPersonScreen extends React.Component {
   checkForm = () => {
     const email_regex = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
     const contact_regex = /^(\+?6?0)[0-9][0-46-9][0-9]{6,8}$/;
-    const companyName = props.route.params.companyName;
-    const isVisitor = props.route.params.isVisitor;
+    const companyName = this.props.route.params.companyName;
+    const isVisitor = this.props.route.params.isVisitor;
     let emailValid = true;
 
     if(this.state.email !== ''){
@@ -164,7 +164,7 @@ export default class OtherPersonScreen extends React.Component {
 
 
   render(){
-    const companyName = props.route.params.companyName;
+    const companyName = this.props.route.params.companyName;
     return (
       <KeyboardAvoidingView style={{ flex: 1, flexDirection: 'column',justifyContent: 'center',}} behavior="padding" enabled   keyboardVerticalOffset={100}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -182,7 +182,7 @@ export default class OtherPersonScreen extends React.Component {
             placeholder='e.g. Leslie Ling'
           />
         </View>
-        {(props.route.params.isVisitor == false) ? 
+        {(this.props.route.params.isVisitor == false) ? 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Department ({companyName}): </Text>    
           <TextInput

@@ -1,8 +1,8 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
-import { Platform, StatusBar } from 'react-native';
+import { Platform, StatusBar, SafeAreaView, StyleSheet } from 'react-native';
 import { SimpleLineIcons } from '@expo/vector-icons';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -20,7 +20,7 @@ import GuardHomeScreen from '../screens/guard/GuardHomeScreen';
 import GuardPatrolScreen from '../screens/guard/GuardPatrolScreen';
 import GuardActivityScreen from '../screens/guard/GuardActivityScreen';
 import IncidentReportScreen from '../screens/guard/IncidentReportScreen';
-
+import OutsiderVehicleRecordScreen from '../screens/outsidervehiclerecord/OutsiderVehicleRecordScreen';
 
 const Stack = createStackNavigator();
 function GuardStack() {
@@ -34,6 +34,10 @@ function GuardStack() {
       <Stack.Screen
         name="GuardHome"
         component={GuardHomeScreen}
+      />
+      <Stack.Screen
+        name="OutsiderVehicleRecord"
+        component={OutsiderVehicleRecordScreen}
       />
       <Stack.Screen
         name="GuardPatrol"
@@ -105,6 +109,13 @@ function SignOutStack() {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
+        options={{
+          headerShown: true,
+          headerTitle: 'Home',
+          headerTitleStyle: {
+            fontFamily: 'roboto-bold',
+          },
+        }}
       />
     </Stack.Navigator>
   );
@@ -113,7 +124,17 @@ function SignOutStack() {
 const Tab = createMaterialTopTabNavigator();
 
 function HomeStack(){
+  const navigation = useNavigation();
+
+  const resetStack = (routeName) => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: routeName }],
+    });
+  };
+
   return(
+    <SafeAreaView style={styles.container}>
     <Tab.Navigator
       initialRouteName="HomeSignOut"
       screenOptions={({route}) => ({
@@ -135,13 +156,14 @@ function HomeStack(){
           // You can return any component that you like here!
           return <SimpleLineIcons name={iconName} size={24} />;
         },
+        swipeEnabled: false,        
         tabBarActiveTintColor: 'rgb(21, 31, 53)',
         tabBarInactiveTintColor : 'rgb(89, 102, 139)',
         tabBarLabelStyle: { 
           fontWeight: 'bold', 
           fontSize: 12, 
         },
-        tabBarStyle: { backgroundColor: 'powderblue' },
+        tabBarStyle: { backgroundColor: '#FFF' },
         style: {
           fontWeight: 'bold',
           backgroundColor: '#FFF',
@@ -154,13 +176,16 @@ function HomeStack(){
           borderBottomWidth: 4,
         }
       })}
+      sceneContainerStyle={{backgroundColor: '#FFF'}}
       >
-    <Tab.Screen name="HomeSignOut" component={SignOutStack} options={{ tabBarLabel: 'Home'}} />
-    <Tab.Screen name="SignIn" component={SignInStack} options={{ tabBarLabel: 'Sign in'}} />
+    <Tab.Screen name="HomeSignOut" component={SignOutStack} options={{ tabBarLabel: 'Home'}} listeners={{tabPress: (e) => {resetStack("Home")}}}/>
+    <Tab.Screen name="SignIn" component={SignInStack} options={{ tabBarLabel: 'Sign in'}} listeners={{tabPress: (e) => {resetStack("SignInSelect")}}}
+      />
     <Tab.Screen name="EZSignIn" component={EZSignInScreen} options={{ tabBarLabel: 'EZ Sign In'}} />
     <Tab.Screen name="RollCall" component={RollCallScreen} options={{ tabBarLabel: 'Roll Call'}} />
-    <Tab.Screen name="Guard" component={GuardStack} options={{ tabBarLabel: 'Guard'}} />
+    <Tab.Screen name="Guard" component={GuardStack} options={{ tabBarLabel: 'Guard'}} listeners={{tabPress: (e) => {resetStack("GuardHome")}}}/>
     </Tab.Navigator>
+    </SafeAreaView>
   );
 }
 
@@ -169,4 +194,14 @@ export default function HomeNavigation(){
     HomeStack
   )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  sceneStyle:{
+    backgroundColor: '#fff',
+  }
+});
 

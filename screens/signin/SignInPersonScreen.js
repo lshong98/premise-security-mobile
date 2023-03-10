@@ -25,8 +25,8 @@ export default class SignInPersonScreen extends React.Component {
     let unsubscribeVisitor = null;
     let unsubscribeStaff = null;
 
-    const isVisitor = props.route.params.isVisitor;
-    const company = props.route.params.companyName;
+    const isVisitor = this.props.route.params.isVisitor;
+    const company = this.props.route.params.companyName;
 
     if(isVisitor == false){
       unsubscribeStaff = firebase.firestore()
@@ -76,8 +76,8 @@ export default class SignInPersonScreen extends React.Component {
   
   checkIfPersonAlreadySignedIn = async (item) => {
     const { navigation } = this.props;
-    const isVisitor = props.route.params.isVisitor;
-    let companyExist = navigation.getParam('companyName');
+    const isVisitor = this.props.route.params.isVisitor;
+    let companyExist = this.props.route.params.companyName;
     let personExist = item.searchStr;
 
     let signedIn = true;
@@ -119,20 +119,20 @@ export default class SignInPersonScreen extends React.Component {
     if(signedIn == false){
       if(!isVisitor && global.internetConnectivity){
         this.props.navigation.navigate('PictureSignIn', {
-          companyName: props.route.params.companyName,
+          companyName: this.props.route.params.companyName,
           contactNo: item.contact_no,
           personName: item.searchStr,
           isVisitor: isVisitor
         })
       }else if(!isVisitor && !global.internetConnectivity){
         this.submitOfflineStaffData(
-          props.route.params.companyName,
+          this.props.route.params.companyName,
           item.contact_no,
           item.searchStr
         );
       }else if(isVisitor == true){
         this.props.navigation.navigate('EntrySignIn', {
-          companyName: props.route.params.companyName,
+          companyName: this.props.route.params.companyName,
           contactNo: item.contact_no,
           personName: item.searchStr,
           isVisitor: isVisitor,
@@ -161,7 +161,7 @@ export default class SignInPersonScreen extends React.Component {
         sign_in_photo: '',
         sign_out_time: '',
         sign_out_photo: '',
-        isVisitor: navigation.getParam('isVisitor')
+        isVisitor: this.props.route.params.isVisitor
       }).then(() => {
         let counterRef = firebase.firestore().collection('Counters').doc('Entries');
         counterRef.update({ "counter": firebase.firestore.FieldValue.increment(1) });
@@ -174,7 +174,7 @@ export default class SignInPersonScreen extends React.Component {
   }
 
   renderRow (item, sectionID, rowID, highlightRowFunc, isSearching) {
-    const isVisitor = props.route.params.isVisitor;
+    const isVisitor = this.props.route.params.isVisitor;
 
     return (
       <Touchable onPress={() => {
@@ -212,7 +212,7 @@ export default class SignInPersonScreen extends React.Component {
 
   renderSearchList = () => {
     let dataSource = [];
-    if(props.route.params.isVisitor){
+    if(this.props.route.params.isVisitor){
       dataSource = this.state.filteredVisitorList;
     }else{
       dataSource = this.state.filteredStaffList;
@@ -252,7 +252,9 @@ export default class SignInPersonScreen extends React.Component {
           <View style={styles.buttonHorizontalContainer}>
             <View style={styles.buttonContainer}>
               <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() => 
-                this.props.navigation.navigate('SignInCompany')}>
+                this.props.navigation.navigate('SignInCompany',{
+                  isVisitor: this.props.route.params.isVisitor
+                })}>
                 BACK
               </Button>
             </View>
@@ -260,8 +262,8 @@ export default class SignInPersonScreen extends React.Component {
               {global.internetConnectivity ? 
               <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() => 
                 this.props.navigation.navigate('OtherPerson',{
-                  companyName: props.route.params.companyName,
-                  isVisitor: props.route.params.isVisitor
+                  companyName: this.props.route.params.companyName,
+                  isVisitor: this.props.route.params.isVisitor
                 })
               }>
                 NEW PERSON
@@ -305,8 +307,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   buttonContainer:{
-    marginVertical: 15,
-    marginHorizontal: 15, 
+    marginVertical: 10,
+    marginHorizontal: 10, 
     justifyContent: 'flex-end'
   },
   buttonText: {

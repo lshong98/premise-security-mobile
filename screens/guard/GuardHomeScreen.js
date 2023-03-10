@@ -85,14 +85,17 @@ export default class GuardHomeScreen extends React.Component{
         </Block>
 
         <Text style={styles.testbranchTitle}>Premise {'\n'}— {global.premiseLocation}</Text>
-        <Button icon="car-brake-alert" buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.guardRouteRequest('IncidentReport')} >
-          REPORT INCIDENT
-        </Button>
         <View style={styles.guardcontainer}>
-          <Button icon="shield-home-outline" style={{marginRight: 10, flex: 1}} buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.guardRouteRequest('GuardPatrol')}>  
+          <Button icon="car-brake-alert" buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.guardRouteRequest('IncidentReport')} style={styles.button}>
+            REPORT INCIDENT
+          </Button>
+          <Button icon="shield-home-outline"  buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.guardRouteRequest('GuardPatrol')} style={styles.button}>
             PATROL
           </Button>
-          <Button icon="account-box-outline" style = {{flex: 1}} buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.guardRouteRequest('GuardActivity')}>
+          <Button icon="car-outline"  buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.guardRouteRequest('OutsiderVehicleRecord')} style={styles.button}>
+            Outsider Vehicle
+          </Button>
+          <Button icon="account-box-outline" buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.guardRouteRequest('GuardActivity')} style={styles.button}>
             MY ACTIVITY
           </Button>
         </View>
@@ -105,7 +108,6 @@ export default class GuardHomeScreen extends React.Component{
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     flexDirection: 'column',
     justifyContent: 'center',
     marginHorizontal: 60
@@ -113,8 +115,12 @@ const styles = StyleSheet.create({
   guardcontainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: "row",
+    flexDirection: "column",
     marginTop: 30,
+  },
+  button:{
+    marginTop: 5,
+    width:'100%',
   },
   testbranchTitle:{
     color: 'gray',
@@ -125,9 +131,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginBottom: 20,
   },
-
   guardLabel: {
-    fontSize: 16, 
+    fontSize: 15, 
     marginBottom: 5,
     marginTop: 10,
     alignSelf: 'center'

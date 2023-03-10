@@ -3,7 +3,6 @@ import { StyleSheet, View, ActivityIndicator, Dimensions, Alert } from 'react-na
 import { Text } from 'react-native-paper';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import * as Location from 'expo-location';
-import * as Permissions from 'expo-permissions'
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
@@ -27,7 +26,7 @@ export default class GuardPatrolScreen extends React.Component {
   }
 
   getLocationPermission = async() => {
-    const { status, permissions } = await Permissions.askAsync(Permissions.LOCATION);
+    const { status } = await Location.requestForegroundPermissionsAsync();
 
     if (status === 'granted') {
       this.getCameraPermission()
@@ -41,7 +40,7 @@ export default class GuardPatrolScreen extends React.Component {
   }
 
   getCameraPermission = async() => {
-    const { status, permissions } = await Permissions.askAsync(Permissions.CAMERA);
+    const { status } = await BarCodeScanner.requestPermissionsAsync();
 
     if (status !== 'granted') {
       Alert.alert('No camera access. Go to settings to manually enable them')

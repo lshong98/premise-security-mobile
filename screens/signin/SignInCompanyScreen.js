@@ -18,7 +18,7 @@ export default class SignInCompanyScreen extends React.Component {
   async componentDidMount(){
     let unsubscribeCompany = null;
     this._isMounted = true;
-    const isVisitor = props.route.params.isVisitor;
+    const isVisitor = this.props.route.params.isVisitor;
 
     if(isVisitor){
       unsubscribeCompany = firebase.firestore()
@@ -69,7 +69,7 @@ export default class SignInCompanyScreen extends React.Component {
       <Touchable onPress={() => {
         this.props.navigation.navigate('SignInPerson', {
           companyName: item.searchStr,
-          isVisitor: props.route.params.isVisitor
+          isVisitor: this.props.route.params.isVisitor
         })
       }}>
         <View key={rowID} style={{flex: 1, marginLeft: 20, height: 40, justifyContent: 'center'}}>
@@ -87,7 +87,7 @@ export default class SignInCompanyScreen extends React.Component {
   renderEmpty () {
     return (
       <View style={styles.emptyDataSource}>
-        <Text style={{color: '#979797', fontSize: 18, paddingTop: 20}}>{props.route.params.isVisitor ? "Loading Companies List" : "Loading Branch List"}</Text>
+        <Text style={{color: '#979797', fontSize: 18, paddingTop: 20}}>{this.props.route.params.isVisitor ? "Loading Companies List" : "Loading Branch List"}</Text>
       </View>
     )
   }
@@ -112,7 +112,7 @@ export default class SignInCompanyScreen extends React.Component {
         renderEmpty={this.renderEmpty.bind(this)}
         rowHeight={40}
         toolbarBackgroundColor={'#2F465B'}
-        title={props.route.params.isVisitor ? 'PLEASE SELECT YOUR COMPANY' : 'PLEASE SELECT YOUR BRANCH'}
+        title={this.props.route.params.isVisitor ? 'PLEASE SELECT YOUR COMPANY' : 'PLEASE SELECT YOUR BRANCH'}
         cancelTitle={'Clear'}
         onClickBack={() => {}}
         searchListBackgroundColor={'#fff'}
@@ -122,7 +122,7 @@ export default class SignInCompanyScreen extends React.Component {
         searchInputPlaceholderColor={'#000'}
         searchInputTextColor={'#000'}
         searchInputTextColorActive={'#000'}
-        searchInputPlaceholder={props.route.params.isVisitor ? 'Search Company' : 'Search Branch'}
+        searchInputPlaceholder={this.props.route.params.isVisitor ? 'Search Company' : 'Search Branch'}
         sectionIndexTextColor={'#000'}
         searchBarBackgroundColor={'#fff'}
       />
@@ -136,7 +136,7 @@ export default class SignInCompanyScreen extends React.Component {
         <View style={styles.buttonVerticalContainer}>
           <View style={styles.buttonHorizontalContainer}>
             <View style={styles.buttonContainer}>
-              {props.route.params.isVisitor && global.internetConnectivity ? 
+              {this.props.route.params.isVisitor && global.internetConnectivity ? 
               <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() => 
                 this.props.navigation.navigate('OtherCompany')}>
                 NEW COMPANY
@@ -179,8 +179,8 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   buttonContainer:{
-    marginVertical: 15,
-    marginHorizontal: 15, 
+    marginVertical: 10,
+    marginHorizontal: 10, 
     justifyContent: 'flex-end'
   },
   buttonText: {

@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
     alignSelf: "flex-end",
     height: 40, 
-    width: 100,
+    width: 120,
     justifyContent: 'center'
   }
 })

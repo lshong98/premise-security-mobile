@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet, View, Dimensions, TouchableOpacity, ImageBackground } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { Camera } from 'expo-camera';
-import * as Permissions from 'expo-permissions'
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import firebase from 'firebase/compat/app';
@@ -26,13 +25,13 @@ export default class PictureSignOutScreen extends React.Component {
   } 
 
   async componentDidMount() {
-    const { status } = await Permissions.askAsync(Permissions.CAMERA);
+    const { status } = await Camera.requestCameraPermissionsAsync();
     this.setState({ hasCameraPermission: status === 'granted' });
   }
 
   submitData = () => {
     const { navigation } = this.props;
-    const docID = navigation.getParam('docID');
+    const docID = this.props.route.params.docID;
     
     firebase.firestore()
     .collection('Entries')
@@ -98,7 +97,7 @@ export default class PictureSignOutScreen extends React.Component {
     return(
       <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}> 
         <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
-            <Ionicons name="ios-reverse-camera" size={50} color="white" />
+            <Ionicons name="camera" size={50} color="white" />
         </TouchableOpacity>
       </Camera>
     );

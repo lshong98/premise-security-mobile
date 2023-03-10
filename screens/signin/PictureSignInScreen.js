@@ -2,7 +2,6 @@ import React from "react";
 import { StyleSheet, View, Dimensions, TouchableOpacity, ImageBackground } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { Camera } from 'expo-camera';
-import * as Permissions from 'expo-permissions'
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import firebase from 'firebase/compat/app';
@@ -28,17 +27,17 @@ export default class PictureSignInScreen extends React.Component {
   } 
 
   async componentDidMount() {
-    const { status } = await Permissions.askAsync(Permissions.CAMERA);
+    const { status } = await Camera.requestCameraPermissionsAsync();
     this.setState({hasCameraPermission: status === 'granted'});
-    if(props.route.params.from === 'EZSignIn'){
+    if(this.props.route.params.from === 'EZSignIn'){
       this.checkIfPersonAlreadySignedIn();
     }
   }
 
   checkIfPersonAlreadySignedIn = async () => {
     const { navigation } = this.props;
-    let companyExist = navigation.getParam('companyName');
-    let personExist = navigation.getParam('personName');
+    let companyExist = this.props.route.params.companyName;
+    let personExist = this.props.route.params.personName;
 
     await firebase.firestore()
       .collection('Entries')
@@ -57,16 +56,16 @@ export default class PictureSignInScreen extends React.Component {
 
   submitData = async () => {
     const { navigation } = this.props;
-    let isVisitor = navigation.getParam('isVisitor')
+    let isVisitor = this.props.route.params.isVisitor
 
-    let company = navigation.getParam('companyName')
-    let name = navigation.getParam('personName')
-    let contactNo = navigation.getParam('contactNo')
-    let noOfPeople = navigation.getParam('noOfPeople')
-    let visitPurpose = navigation.getParam('visitPurpose')
-    let personMeeting = navigation.getParam('personMeeting')
-    let personDepartment = navigation.getParam('personDepartment')
-    let walkinArea = navigation.getParam('walkinArea')
+    let company = this.props.route.params.companyName
+    let name = this.props.route.params.personName
+    let contactNo = this.props.route.params.contactNo
+    let noOfPeople = this.props.route.params.noOfPeople
+    let visitPurpose = this.props.route.params.visitPurpose
+    let personMeeting = this.props.route.params.personMeeting
+    let personDepartment = this.props.route.params.personDepartment
+    let walkinArea = this.props.route.params.walkinArea
 
     if(!this.state.signedIn){
       if(!isVisitor){
@@ -96,10 +95,10 @@ export default class PictureSignInScreen extends React.Component {
         isVisitor: isVisitor
       })
       .then(() => {
-        if(navigation.getParam('from') === 'EZSignIn'){
+        if(this.props.route.params.from === 'EZSignIn'){
           firebase.firestore()
           .collection("EZSignIns")
-          .doc(navigation.getParam('id'))
+          .doc(this.props.route.params.id)
           .delete();
         }
         let counterRef = firebase.firestore().collection('Counters').doc('Entries');
@@ -109,10 +108,10 @@ export default class PictureSignInScreen extends React.Component {
         console.log(error)
       })
     }else{
-      if(navigation.getParam('from') === 'EZSignIn'){
+      if(this.props.route.params.from === 'EZSignIn'){
         firebase.firestore()
         .collection("EZSignIns")
-        .doc(navigation.getParam('id'))
+        .doc(this.props.route.params.id)
         .delete();
       }
       this.props.navigation.navigate('HomeSignOut')
@@ -170,7 +169,7 @@ export default class PictureSignInScreen extends React.Component {
     return(
       <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}> 
         <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
-            <Ionicons name="ios-reverse-camera" size={50} color="white" />
+            <Ionicons name="camera" size={50} color="white" />
         </TouchableOpacity>
       </Camera>
     );

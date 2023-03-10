@@ -3,7 +3,6 @@ import { StyleSheet, View, ScrollView, Dimensions, TouchableOpacity, ImageBackgr
 import { Text, Button, TextInput } from 'react-native-paper';
 import DropDownPicker from '../../components/react-native-dropdown-picker/src/index';
 import { Camera } from 'expo-camera';
-import * as Permissions from 'expo-permissions'
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Platform } from 'react-native';
 import firebase from 'firebase/compat/app';
@@ -32,7 +31,7 @@ export default class IncidentReportScreen extends React.Component {
   } 
 
   async componentDidMount() {
-    const { status } = await Permissions.askAsync(Permissions.CAMERA);
+    const { status } = await Camera.requestCameraPermissionsAsync();
     this.setState({ hasCameraPermission: status === 'granted' });
     this.getAdminExecutivesContact()
   }
@@ -217,7 +216,7 @@ export default class IncidentReportScreen extends React.Component {
     return(
       <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}> 
         <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
-            <Ionicons name="ios-reverse-camera" size={50} color="white" />
+            <Ionicons name="camera" size={50} color="white" />
         </TouchableOpacity>
       </Camera>
     );

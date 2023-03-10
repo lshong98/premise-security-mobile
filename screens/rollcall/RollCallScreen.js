@@ -316,7 +316,8 @@ const styles = StyleSheet.create({
   },
   inputTextField:{
     width: width * 0.8, 
-    height: 40, 
-    backgroundColor: 'white'
+    // height: 40, 
+    backgroundColor: 'white',
+    fontSize: 16,
   },
 });
