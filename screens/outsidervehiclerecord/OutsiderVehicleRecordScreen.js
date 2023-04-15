@@ -70,14 +70,17 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
                 label={false}
                 mode='outlined'
                 style={styles.datePickerValueField}
-                editable={false}
+                editable={true}
+                selectable={false}
                 selectTextOnFocus={false}
                 value={this.state.park_time}
                 onPressIn={()=>{this.setState({ parkTimePickerShow: true })}}
             />
+            {Platform.OS === 'ios' &&
             <Button style={styles.datePickerButtonField} buttonColor={"#2F465B"} mode="contained" onPress={() => this.setState({ parkTimePickerShow: false, park_time: this.state.park_time_date.toLocaleTimeString('it-IT') })}>
                 Confirm
             </Button>
+            }
         </View>
 
         {this.state.parkTimePickerShow && (
@@ -86,7 +89,12 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
           mode={'time'}
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           is24Hour={true}
-          onChange={(event, value) => {this.setState({ park_time_date: value }); if (Platform.OS === 'android') {this.setState({parkTimePickerShow: false})}}}
+          onChange={(event, value) => {
+            this.setState({ park_time_date: value }); 
+            if (Platform.OS === 'android') {
+              this.setState({parkTimePickerShow: false, park_time: this.state.park_time_date.toLocaleTimeString('it-IT')})
+            }
+          }}
           style={styles.datePicker}
         />
         )}
@@ -97,14 +105,17 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
                 label={false}
                 mode='outlined'
                 style={styles.datePickerValueField}
-                editable={false}
+                editable={true}
+                selectable={false}
                 selectTextOnFocus={false}
                 value={this.state.leave_time}
                 onPressIn={()=>{this.setState({ leaveTimePickerShow: true })}}
             />
+            {Platform.OS === 'ios' &&
             <Button style={styles.datePickerButtonField} buttonColor={"#2F465B"} mode="contained" onPress={() => this.setState({ leaveTimePickerShow: false, leave_time: this.state.leave_time_date.toLocaleTimeString('it-IT') })}>
                 Confirm
             </Button>
+            }
         </View>
 
         {this.state.leaveTimePickerShow && (
@@ -113,13 +124,18 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
           mode={'time'}
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           is24Hour={true}
-          onChange={(event, value) => {this.setState({ leave_time_date: value }); if (Platform.OS === 'android') {this.setState({leaveTimePickerShow: false})}}}
+          onChange={(event, value) => {
+            this.setState({ leave_time_date: value });
+            if (Platform.OS === 'android'){
+              this.setState({leaveTimePickerShow: false, leave_time: this.state.leave_time_date.toLocaleTimeString('it-IT')})
+            }
+          }}
           style={styles.datePicker}
         />
         )}
 
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Vahicle Type: </Text>    
+            <Text style={styles.inputLabel}>Vehicle Type: </Text>    
             <TextInput
                 label={false}
                 mode='outlined'

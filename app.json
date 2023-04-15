@@ -2,7 +2,7 @@
   "expo": {
     "name": "premise-security-mobile",
     "slug": "premise-security-mobile",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
@@ -19,9 +19,9 @@
     ],
     "ios": {
       "bundleIdentifier": "com.swinburne.tpsapp",
-      "buildNumber": "1.0.9",
+      "buildNumber": "1.10.0",
       "supportsTablet": true,
-      "infoPlist":{
+      "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to scan barcodes and take pictures of users' face.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow the app to use your location",
         "NSLocationAlwaysUsageDescription": "Allow the app to use your location",
@@ -34,6 +34,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f20e7caf-c4a9-4422-aabf-b585b9fc2a2a"
+      }
     }
   }
 }
