@@ -65,7 +65,7 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
         
         
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Park Time</Text>    
+            <Text style={styles.inputLabel}>Park Time (Masa Meletak Kenderaan)</Text>    
             <TextInput
                 label={false}
                 mode='outlined'
@@ -100,7 +100,7 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
         )}
 
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Leave Time</Text>    
+            <Text style={styles.inputLabel}>Leave Time (Masa Kenderaan Pergi)</Text>    
             <TextInput
                 label={false}
                 mode='outlined'
@@ -135,7 +135,7 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
         )}
 
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Vehicle Type: </Text>    
+            <Text style={styles.inputLabel}>Vehicle Type: (Jenis Kenderaan)</Text>    
             <TextInput
                 label={false}
                 mode='outlined'
@@ -147,7 +147,7 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
         </View>
 
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Vehicle Color</Text>    
+            <Text style={styles.inputLabel}>Vehicle Color (Warna Kenderaan)</Text>    
             <TextInput
                 label={false}
                 mode='outlined'
@@ -159,7 +159,7 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
         </View>
         
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Vehicle Number:</Text>    
+            <Text style={styles.inputLabel}>Vehicle Number (Nombor Pendaftaran):</Text>    
             <TextInput
                 label={false}
                 mode='outlined'
@@ -171,7 +171,7 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
         </View>
 
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Remark:</Text>    
+            <Text style={styles.inputLabel}>Remark (Catatan):</Text>    
             <TextInput
                 label={false}
                 mode='outlined'
@@ -182,7 +182,7 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
         </View>
 
         <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Guard name: </Text>    
+            <Text style={styles.inputLabel}>Guard name (Direkod Oleh): </Text>    
             <TextInput
               label={false}
               mode='outlined'

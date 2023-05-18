@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   background:{
     width, 
-    height: height * 0.6,
+    height: height * 0.5,
     justifyContent: 'flex-end'
   },
   backgroundDim:{
