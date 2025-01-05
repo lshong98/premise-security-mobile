@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, ActivityIndicator, Dimensions, Alert } from 'react-native';
 import { Text } from 'react-native-paper';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+// import { BarCodeScanner } from 'expo-camera';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import firebase from 'firebase/compat/app';
@@ -19,7 +19,7 @@ export default class GuardPatrolScreen extends React.Component {
       read: false,
       coords: ''
     }
-  } 
+  }
 
   async componentDidMount() {
     this.getLocationPermission()
@@ -40,7 +40,7 @@ export default class GuardPatrolScreen extends React.Component {
   }
 
   getCameraPermission = async() => {
-    const { status } = await BarCodeScanner.requestPermissionsAsync();
+    // const { status } = await BarCodeScanner.requestPermissionsAsync();
 
     if (status !== 'granted') {
       Alert.alert('No camera access. Go to settings to manually enable them')
@@ -131,24 +131,24 @@ export default class GuardPatrolScreen extends React.Component {
         return(
           <View style={styles.container} >
             <View style={styles.qrcode}>
-            <BarCodeScanner
-              onBarCodeScanned={(e) => {
-                if(global.internetConnectivity && this.state.read == false){
-                  this.handleBarCodeScanned(e)
-                } else if (this.state.read == false){
-                  this.handleBarCodeScannedOffline(e)
-                }
-              }}
-              style={[StyleSheet.absoluteFillObject, styles.container]}
-            >
-              <View style={styles.layerTop} />
-              <View style={styles.layerCenter}>
-                <View style={styles.layerLeft} />
-                <View style={styles.focused} />
-                <View style={styles.layerRight} />
-              </View>
-              <View style={styles.layerBottom} />
-            </BarCodeScanner>
+            {/*<BarCodeScanner*/}
+            {/*  onBarCodeScanned={(e) => {*/}
+            {/*    if(global.internetConnectivity && this.state.read == false){*/}
+            {/*      this.handleBarCodeScanned(e)*/}
+            {/*    } else if (this.state.read == false){*/}
+            {/*      this.handleBarCodeScannedOffline(e)*/}
+            {/*    }*/}
+            {/*  }}*/}
+            {/*  style={[StyleSheet.absoluteFillObject, styles.container]}*/}
+            {/*>*/}
+            {/*  <View style={styles.layerTop} />*/}
+            {/*  <View style={styles.layerCenter}>*/}
+            {/*    <View style={styles.layerLeft} />*/}
+            {/*    <View style={styles.focused} />*/}
+            {/*    <View style={styles.layerRight} />*/}
+            {/*  </View>*/}
+            {/*  <View style={styles.layerBottom} />*/}
+            {/*</BarCodeScanner>*/}
             </View>
             <View style={styles.infocontainer}>
               <MaterialCommunityIcons name="qrcode-scan" size={50} />
@@ -157,9 +157,9 @@ export default class GuardPatrolScreen extends React.Component {
           </View>
         );
     }
-    
+
   }
-  
+
 }
 
 const opacity = 'rgba(0, 0, 0, .6)';
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
 
   instructions: {
     fontSize: 20,
-    flex: 1, 
+    flex: 1,
     flexWrap: 'wrap',
     fontWeight: 'bold',
     marginLeft: 20

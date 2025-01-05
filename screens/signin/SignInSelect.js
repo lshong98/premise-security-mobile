@@ -10,7 +10,7 @@ export default class HomeScreen extends React.Component{
     this.state = {
       consent: false,
     }
-  } 
+  }
 
   visitorSignInRequest = () => {
     if(this.state.consent === true) {

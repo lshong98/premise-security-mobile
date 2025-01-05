@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Alert, ImageBackground, Image, Dimensions, StyleSheet} from 'react-native'; 
+import { Alert, ImageBackground, Image, Dimensions, StyleSheet} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button, Block, Text } from '../../components';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -13,7 +13,8 @@ export default class LocationScreen extends Component {
   constructor(props){
     super(props);
     this.state = {
-      selectedLocation: '',
+      open: false,
+      selectedLocation: null,
       locationList: []
     }
   }
@@ -27,7 +28,7 @@ export default class LocationScreen extends Component {
         firebase.firestore()
         .collection('Premises')
         .get()
-        .then(snapshot => { 
+        .then(snapshot => {
           if(this._isMounted){
             snapshot.docs.forEach(doc => {
               allLocations.push({label: doc.data().name, value: doc.data().name})
@@ -35,11 +36,11 @@ export default class LocationScreen extends Component {
             })
 
             //all premise name only array for homescreen use
-            AsyncStorage.setItem('allpremises', JSON.stringify(allLocationsForGlobal)) 
-            //dropdown offline data 
-            AsyncStorage.setItem('premise', JSON.stringify(allLocations)) 
+            AsyncStorage.setItem('allpremises', JSON.stringify(allLocationsForGlobal))
+            //dropdown offline data
+            AsyncStorage.setItem('premise', JSON.stringify(allLocations))
             //dropdown data
-            this.setState({locationList: allLocations}) 
+            this.setState({locationList: allLocations})
           }
         })
       } else {
@@ -47,7 +48,7 @@ export default class LocationScreen extends Component {
         this.setState({locationList: JSON.parse(asyncLocations)});
       }
     })
-  
+
   }
 
   componentWillUnmount() {
@@ -56,16 +57,16 @@ export default class LocationScreen extends Component {
 
   submitLocation = () => {
     const { selectedLocation } = this.state
-    if(selectedLocation != '' && selectedLocation != null && selectedLocation != "Select Trienekens Premise"){
+    if(selectedLocation != null){
       this.props.navigation.navigate('Login', {selectedLocation: selectedLocation})
     } else {
       Alert.alert('Please select a branch or check your internet connection')
     }
   }
-  
+
   render(){
-    const { locationList } = this.state
-    
+    const { open, selectedLocation, locationList } = this.state
+
     return (
       <Block style={{flex:1}}>
           <ImageBackground source={require('../../assets/images/location_bg.png')} resizeMode="cover" style={styles.background}>
@@ -75,16 +76,26 @@ export default class LocationScreen extends Component {
               <Text style={styles.description} size={32}>Premise Security App</Text>
               <Text style={styles.description} size={18}>"Your Trusted Partner in Environmental Management"</Text>
             </Block>
-          </ImageBackground> 
+          </ImageBackground>
         <Block center style={{ flex: 1, flexDirection: 'row', justifyContent:'flex-end' }}>
           <Block style={{flex: 1, marginHorizontal: 40}}>
             <DropDownPicker
-              items={
-                (locationList && locationList.length > 0) ? locationList : [{label: 'Select Trienekens Premise', value: 'Select Trienekens Premise'}]
-              }
-              containerStyle={{height: 40}}
-              onChangeItem={item => this.setState({ selectedLocation: item.value })}
-              dropDownMaxHeight={120}
+                open={open}
+                value={selectedLocation}
+                items={
+                  locationList.length > 0
+                      ? locationList
+                      : [{ label: 'Select Trienekens Premise', value: 'Select Trienekens Premise' }]
+                }
+                setOpen={(open) => this.setState({ open })}
+                setValue={(callback) => {
+                  const value = callback(selectedLocation); // `callback` applies changes to the value
+                  console.log('Selected location:', value); // Debugging
+                  this.setState({ selectedLocation: value });
+                }}
+                setItems={(items) => this.setState({ locationList: items })}
+                containerStyle={{height: 40}}
+                dropDownMaxHeight={120}
             />
           </Block>
           <Button style={styles.submitButton} onPress={() => this.submitLocation()}>
@@ -106,26 +117,26 @@ const styles = StyleSheet.create({
     marginRight: 25
   },
   background:{
-    width, 
+    width,
     height: height * 0.5,
     justifyContent: 'flex-end'
   },
   backgroundDim:{
-    backgroundColor: 'rgba(0,0,0,0.60)', 
-    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.60)',
+    flex: 1,
     justifyContent: 'center'
   },
   logo:{
-    height: 151, 
-    width: 120, 
+    height: 151,
+    width: 120,
     alignSelf: 'center'
   },
   description: {
-    paddingHorizontal: 10, 
-    marginTop: 10, 
-    fontFamily: 'roboto-light', 
-    lineHeight: 30, 
-    color: 'white', 
+    paddingHorizontal: 10,
+    marginTop: 10,
+    fontFamily: 'roboto-light',
+    lineHeight: 30,
+    color: 'white',
     textAlign: 'center'
   },
 })

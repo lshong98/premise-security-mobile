@@ -25,12 +25,13 @@ export default class HomeScreen extends React.Component{
       visitorState: [],
       staffState: [],
       visible: false,
+      alertDropdownOpen: false,
       alertIncident: 'not sign out',
       alertPerson: '',
       alertPersonNo: '',
       alertRecipients: [],
     }
-  } 
+  }
 
   async componentDidMount(){
     this._isMounted = true;
@@ -60,31 +61,31 @@ export default class HomeScreen extends React.Component{
     .onSnapshot(snapshot => {
       visitorSource = [];
       staffSource = [];
-      
+
       if(this._isMounted){
         snapshot.docs.forEach(doc => {
           if(!doc.data().isVisitor)
             staffSource.push({
-              id: doc.id, 
-              name: doc.data().name, 
-              company: doc.data().company, 
+              id: doc.id,
+              name: doc.data().name,
+              company: doc.data().company,
               purpose: doc.data().visit_purpose,
-              sign_in_time: doc.data().sign_in_time, 
+              sign_in_time: doc.data().sign_in_time,
               pic: doc.data().sign_in_photo,
               contact_no: doc.data().contact_no})
-          else 
+          else
             visitorSource.push({
-              id: doc.id, 
-              name: doc.data().name, 
-              company: doc.data().company, 
+              id: doc.id,
+              name: doc.data().name,
+              company: doc.data().company,
               purpose: doc.data().visit_purpose,
               sign_in_time: doc.data().sign_in_time,
               pic: doc.data().sign_in_photo,
               contact_no: doc.data().contact_no})
         })
         this.setState({
-          visitorState: visitorSource, 
-          staffState: staffSource, 
+          visitorState: visitorSource,
+          staffState: staffSource,
           loading: false
         }, () => { this.sortEntries() })
       }
@@ -125,7 +126,7 @@ export default class HomeScreen extends React.Component{
     .get()
     .then(snapshot => {
       let masteradminData = [];
-      
+
       snapshot.docs.forEach(doc => {
         masteradminData.push(doc.data().contact_no)
       })
@@ -146,10 +147,10 @@ export default class HomeScreen extends React.Component{
   sortEntries = () => {
       let visitors = this.state.visitorState;
       let staffs = this.state.staffState;
-      
+
       visitors.sort(this.compareTimestamp)
       staffs.sort(this.compareTimestamp)
-      
+
       this.setState({visitorState: visitors, staffState: staffs})
   }
 
@@ -164,7 +165,7 @@ export default class HomeScreen extends React.Component{
         const { result } = await SMS.sendSMSAsync(alertRecipients, message);
       } else {
         Alert.alert("SMS is not available on this device.")
-      }      
+      }
     }
   }
 
@@ -212,7 +213,7 @@ export default class HomeScreen extends React.Component{
               </View>
             </View>
             <View style={styles.testbuttonContainer}>
-              <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () => 
+              <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () =>
                 this.props.navigation.navigate('PictureSignOut',{docID: visitor.id})
               : () => this.offlinePictureSignOut(visitor.id)}
               >
@@ -236,7 +237,7 @@ export default class HomeScreen extends React.Component{
                 size="large"
                 source={{uri:staff.pic !== "" ? staff.pic : 'https://via.placeholder.com/'}}
                 activeOpacity={0.7}
-              > 
+              >
                 <MaterialCommunityIcons style={{position:"absolute", top:-10, left: -13,}} name="alert-circle" size={24} color="#CE5555" onPress={() => this.toggleModal(staff.name, staff.contact_no)}/>
               </Avatar>
             </View>
@@ -248,7 +249,7 @@ export default class HomeScreen extends React.Component{
               </View>
             </View>
             <View style={styles.testbuttonContainer}>
-              <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () => 
+              <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () =>
                 this.props.navigation.navigate('PictureSignOut',{docID: staff.id})
               : () => this.offlinePictureSignOut(staff.id)}
               >
@@ -266,9 +267,17 @@ export default class HomeScreen extends React.Component{
         <Modal isVisible={this.state.visible} onBackdropPress={() => this.setState({ visible: false })}>
           <View style={{justifyContent:'center', marginHorizontal: 40, padding: 40, backgroundColor: 'white', borderRadius: 20}}>
             <DropDownPicker
+              open={this.state.alertDropdownOpen}
+              value={this.state.alertIncident} // The selected value
               items={[
                 {label: 'Not signed out', value: 'not signed out'}
               ]}
+              setOpen={(open) => this.setState({ alertDropdownOpen: open })}
+              setValue={(callback) =>
+                  this.setState((state) => ({
+                    alertIncident: callback(state.alertIncident),
+                  }))
+              }
               containerStyle={{height: 40}}
               // defaultIndex={0}
               defaultValue={'not sign out'}
@@ -323,7 +332,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   signoutButton:{
-    color: '#2F465B', 
+    color: '#2F465B',
     fontWeight: 'bold'
   },
 
@@ -353,8 +362,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   testitemAvatar: {
-    borderRadius:0, 
-    borderColor:'transparent', 
+    borderRadius:0,
+    borderColor:'transparent',
     backgroundColor:'transparent'
   },
   testitemName:{
