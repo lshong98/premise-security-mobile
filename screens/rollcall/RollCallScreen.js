@@ -94,15 +94,15 @@ export default class RollCallScreen extends React.Component {
   }
 
   sendSMS = async () => {
-    if(this.state.recipients.length == 0){
+    if(this.state.recipients.length === 0){
       Alert.alert("No recipients are selected.")
-    }else if(this.state.message == ''){
+    }else if(this.state.message === ''){
       Alert.alert("Message is empty.")
     }else{
       const isAvailable = await SMS.isAvailableAsync();
-      const recipents = [...this.state.recipients, ...this.state.smsAdminrecipients];
+      const allRecipients = [...this.state.recipients, ...this.state.smsAdminrecipients];
       if (isAvailable) {
-        const { result } = await SMS.sendSMSAsync(recipents, this.state.message);
+        const { result } = await SMS.sendSMSAsync(allRecipients, this.state.message);
       } else {
         Alert.alert("SMS is not available on this device.")
       }      

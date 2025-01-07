@@ -178,11 +178,11 @@ function HomeStack(){
       })}
       sceneContainerStyle={{backgroundColor: '#FFF'}}
       >
-    <Tab.Screen key="HomeSignOut" name="HomeSignOut" component={SignOutStack} options={{ tabBarLabel: 'Home'}} listeners={{tabPress: (e) => {resetStack("Home")}}}/>
-    <Tab.Screen key="SignIn" name="SignIn" component={SignInStack} options={{ tabBarLabel: 'Sign in'}} listeners={{tabPress: (e) => {resetStack("SignInSelect")}}}/>
-    <Tab.Screen key="EZSignIn" name="EZSignIn" component={EZSignInScreen} options={{ tabBarLabel: 'EZ Sign In'}} />
-    <Tab.Screen key="RollCall" name="RollCall" component={RollCallScreen} options={{ tabBarLabel: 'Roll Call'}} />
-    <Tab.Screen key="Guard" name="Guard" component={GuardStack} options={{ tabBarLabel: 'Guard'}} listeners={{tabPress: (e) => {resetStack("GuardHome")}}}/>
+      <Tab.Screen key="HomeSignOut" name="HomeSignOut" component={SignOutStack} options={{ tabBarLabel: 'Home'}} listeners={{tabPress: (e) => {resetStack("Home")}}}/>
+      <Tab.Screen key="EZSignIn" name="EZSignIn" component={EZSignInScreen} options={{ tabBarLabel: 'EZ Sign In'}} />
+      <Tab.Screen key="SignIn" name="SignIn" component={SignInStack} options={{ tabBarLabel: 'Sign in'}} listeners={{tabPress: (e) => {resetStack("SignInSelect")}}}/>
+      <Tab.Screen key="RollCall" name="RollCall" component={RollCallScreen} options={{ tabBarLabel: 'Roll Call'}} />
+      <Tab.Screen key="Guard" name="Guard" component={GuardStack} options={{ tabBarLabel: 'Guard'}} listeners={{tabPress: (e) => {resetStack("GuardHome")}}}/>
     </Tab.Navigator>
     </SafeAreaView>
   );
