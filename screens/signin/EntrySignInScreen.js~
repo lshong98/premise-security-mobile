@@ -78,6 +78,10 @@ export default function EntrySignInScreen({navigation, route}) {
       if(visitPurpose !== 'Walk-in customer'){
         setWalkingArea('');
       }
+      console.log(peopleNo);
+      console.log(visitPurpose);
+      console.log(personMeeting);
+      console.log(personDepartment);
 
       navigation.navigate('PictureSignIn', {
         companyName: route.params.companyName,

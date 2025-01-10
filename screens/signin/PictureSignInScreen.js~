@@ -15,6 +15,7 @@ export default function PictureSignInScreen({navigation, route}) {
   const [cameraFacing, setCameraFacing] = useState('front');
   const [resizedPhoto, setResizedPhoto] = useState(null);
   const [photo, setPhoto] = useState(null);
+  const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -44,7 +45,7 @@ export default function PictureSignInScreen({navigation, route}) {
       })
   }
 
-  const submitData = async (imageUrl) => {
+  const submitData = async () => {
     const isVisitor = route.params.isVisitor
 
     const company = route.params.companyName
@@ -78,7 +79,7 @@ export default function PictureSignInScreen({navigation, route}) {
         walkin_area: walkinArea,
         premise: global.premiseLocation,
         sign_in_time: firebase.firestore.Timestamp.fromDate(new Date()),
-        sign_in_photo: imageUrl,
+        sign_in_photo: image,
         sign_out_time: '',
         sign_out_photo: '',
         isVisitor: isVisitor
@@ -117,12 +118,16 @@ export default function PictureSignInScreen({navigation, route}) {
       setUploading(true);
       try {
         let uploadUrl = await uploadImageAsync(resizedPhoto);
-        await submitData(uploadUrl);
+        setImage(uploadUrl);
+        await submitData();
       } catch (e) {
         console.log(e);
         alert('Upload failed, please check your internet connection or try again');
       } finally {
-        setUploading(false);
+        console.log(image);
+        if(image !== null){
+
+        }
       }
     }
   };

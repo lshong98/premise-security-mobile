@@ -199,7 +199,7 @@ export default function IncidentReportScreen ({navigation}) {
     return (
         <View style={styles.container}>
           <Text style={styles.message}>We need your permission to use the camera</Text>
-          <Button onPress={requestPermission} title="Grant Permission" />
+          <Button onPress={requestPermission}>Grant Permission</Button>
         </View>
     );
   }

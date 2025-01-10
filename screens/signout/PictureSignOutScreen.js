@@ -106,7 +106,7 @@ export default class PictureSignOutScreen extends React.Component {
     return(
       <ImageBackground resizeMode='cover' style={{flex: 1, transform: [{scaleX: -1}]}} source={{uri: this.state.photo}}>
         <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={() => this.setState({ photo: null })}>
-            <Ionicons name="ios-close" size={50} color="white" />
+            <Ionicons name="close-outline" size={50} color="white" />
         </TouchableOpacity>
       </ImageBackground> 
     )

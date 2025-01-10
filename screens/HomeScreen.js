@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, ActivityIndicator, TouchableWithoutFeedback, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Divider, Text, Button } from 'react-native-paper';
@@ -17,103 +17,183 @@ global.subscribers = [];
 export let visitorSource = []
 export let staffSource = []
 
-export default class HomeScreen extends React.Component{
-  constructor(props){
-    super(props);
-    this.state = {
-      loading: true,
-      visitorState: [],
-      staffState: [],
-      visible: false,
-      alertDropdownOpen: false,
-      alertIncident: 'not sign out',
-      alertPerson: '',
-      alertPersonNo: '',
-      alertRecipients: [],
-    }
-  }
+export default function HomeScreen({ navigation }){
+  const [loading, setLoading] = useState(true);
+  const [visitorState, setVisitorState] = useState([]);
+  const [staffState, setStaffState] = useState([]);
+  const [visible, setVisible] = useState(false);
+  const [alertDropdownOpen, setAlertDropdownOpen] = useState(false);
+  const [alertIncident, setAlertIncident] = useState('not sign out');
+  const [alertPerson, setAlertPerson] = useState('');
+  const [alertPersonNo, setAlertPersonNo] = useState('');
+  const [alertRecipients, setAlertRecipients] = useState([]);
 
-  async componentDidMount(){
-    this._isMounted = true;
-    let premises = JSON.parse(await AsyncStorage.getItem('allpremises'));
-    let premiseList = [];
+  useEffect(() => {
+    let isMounted = true;
+    let unsubscribeNetwork;
+    let unsubscribeHome;
 
-    premises.forEach(premise => {
-      if(premise.includes("(")){
-        premise = premise.substring(0, premise.indexOf('('))
-      }
+    const loadData = async () => {
+      try {
+        const premises = JSON.parse(await AsyncStorage.getItem('allpremises'));
+        let premiseList = [];
 
-      if(!premiseList.includes(premise.trim())){
-        premiseList.push(premise.trim())
-      }
-    })
+        premises.forEach(premise => {
+          if (premise.includes("(")) {
+            premise = premise.substring(0, premise.indexOf('('))
+          }
 
-    //global variables
-    global.premiseLocation = await AsyncStorage.getItem('location')
-    let unsubscribeNetwork = NetInfo.addEventListener(state => {
-      global.internetConnectivity = state.isConnected && state.isInternetReachable;
-    });
-
-    let unsubscribeHome = firebase.firestore()
-    .collection('Entries')
-    .where('sign_out_time', '==', '')
-    .where('premise', '==', global.premiseLocation)
-    .onSnapshot(snapshot => {
-      visitorSource = [];
-      staffSource = [];
-
-      if(this._isMounted){
-        snapshot.docs.forEach(doc => {
-          if(!doc.data().isVisitor)
-            staffSource.push({
-              id: doc.id,
-              name: doc.data().name,
-              company: doc.data().company,
-              purpose: doc.data().visit_purpose,
-              sign_in_time: doc.data().sign_in_time,
-              pic: doc.data().sign_in_photo,
-              contact_no: doc.data().contact_no})
-          else
-            visitorSource.push({
-              id: doc.id,
-              name: doc.data().name,
-              company: doc.data().company,
-              purpose: doc.data().visit_purpose,
-              sign_in_time: doc.data().sign_in_time,
-              pic: doc.data().sign_in_photo,
-              contact_no: doc.data().contact_no})
+          if (!premiseList.includes(premise.trim())) {
+            premiseList.push(premise.trim())
+          }
         })
-        this.setState({
-          visitorState: visitorSource,
-          staffState: staffSource,
-          loading: false
-        }, () => { this.sortEntries() })
+
+        //global variables
+        global.premiseLocation = await AsyncStorage.getItem('location');
+        unsubscribeNetwork = NetInfo.addEventListener(state => {
+          global.internetConnectivity = state.isConnected && state.isInternetReachable;
+        });
+
+        unsubscribeHome = firebase.firestore()
+            .collection('Entries')
+            .where('sign_out_time', '==', '')
+            .where('premise', '==', global.premiseLocation)
+            .onSnapshot(snapshot => {
+              if (isMounted) {
+                visitorSource = [];
+                staffSource = [];
+
+                snapshot.docs.forEach(doc => {
+                  if (!doc.data().isVisitor)
+                    staffSource.push({
+                      id: doc.id,
+                      name: doc.data().name,
+                      company: doc.data().company,
+                      purpose: doc.data().visit_purpose,
+                      sign_in_time: doc.data().sign_in_time,
+                      pic: doc.data().sign_in_photo,
+                      contact_no: doc.data().contact_no
+                    });
+                  else
+                    visitorSource.push({
+                      id: doc.id,
+                      name: doc.data().name,
+                      company: doc.data().company,
+                      purpose: doc.data().visit_purpose,
+                      sign_in_time: doc.data().sign_in_time,
+                      pic: doc.data().sign_in_photo,
+                      contact_no: doc.data().contact_no
+                    });
+                });
+
+                setVisitorState(visitorSource);
+                setStaffState(staffSource);
+                setLoading(false);
+                sortEntries();
+              }
+            });
+        global.subscribers.push(unsubscribeHome);
+        global.subscribers.push(unsubscribeNetwork);
+
+        getMasterAdminContact();
+      } catch (e) {
+        console.error("Error loading data:", error);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    })
+    };
 
-    global.subscribers.push(unsubscribeHome)
-    global.subscribers.push(unsubscribeNetwork)
+    loadData();
 
-    this.getMasterAdminContact()
-  }
+    return () => {
+      isMounted = false;
+      if (unsubscribeNetwork) unsubscribeNetwork();
+      if (unsubscribeHome) unsubscribeHome();
+    };
+  }, []);
 
-  componentWillUnmount() {
-    this._isMounted = false;
-    this.setState({dialog: false})
-  }
+  // async componentDidMount(){
+  //   this._isMounted = true;
+  //   let premises = JSON.parse(await AsyncStorage.getItem('allpremises'));
+  //   let premiseList = [];
+  //
+  //   premises.forEach(premise => {
+  //     if(premise.includes("(")){
+  //       premise = premise.substring(0, premise.indexOf('('))
+  //     }
+  //
+  //     if(!premiseList.includes(premise.trim())){
+  //       premiseList.push(premise.trim())
+  //     }
+  //   })
+  //
+  //   //global variables
+  //   global.premiseLocation = await AsyncStorage.getItem('location')
+  //   let unsubscribeNetwork = NetInfo.addEventListener(state => {
+  //     global.internetConnectivity = state.isConnected && state.isInternetReachable;
+  //   });
+  //
+  //   let unsubscribeHome = firebase.firestore()
+  //   .collection('Entries')
+  //   .where('sign_out_time', '==', '')
+  //   .where('premise', '==', global.premiseLocation)
+  //   .onSnapshot(snapshot => {
+  //     visitorSource = [];
+  //     staffSource = [];
+  //
+  //     if(this._isMounted){
+  //       snapshot.docs.forEach(doc => {
+  //         if(!doc.data().isVisitor)
+  //           staffSource.push({
+  //             id: doc.id,
+  //             name: doc.data().name,
+  //             company: doc.data().company,
+  //             purpose: doc.data().visit_purpose,
+  //             sign_in_time: doc.data().sign_in_time,
+  //             pic: doc.data().sign_in_photo,
+  //             contact_no: doc.data().contact_no})
+  //         else
+  //           visitorSource.push({
+  //             id: doc.id,
+  //             name: doc.data().name,
+  //             company: doc.data().company,
+  //             purpose: doc.data().visit_purpose,
+  //             sign_in_time: doc.data().sign_in_time,
+  //             pic: doc.data().sign_in_photo,
+  //             contact_no: doc.data().contact_no})
+  //       })
+  //       this.setState({
+  //         visitorState: visitorSource,
+  //         staffState: staffSource,
+  //         loading: false
+  //       }, () => { this.sortEntries() })
+  //     }
+  //   })
+  //
+  //   global.subscribers.push(unsubscribeHome)
+  //   global.subscribers.push(unsubscribeNetwork)
+  //
+  //   this.getMasterAdminContact()
+  // }
 
-  unsubscribeListeners = async () => {
+  // componentWillUnmount() {
+  //   this._isMounted = false;
+  //   this.setState({dialog: false})
+  // }
+
+  const unsubscribeListeners = async () => {
     let itemsProcessed = 0;
     global.subscribers.forEach(subscriber => {
       subscriber();
       itemsProcessed++;
-      if(itemsProcessed == global.subscribers.length){
+      if(itemsProcessed === global.subscribers.length){
         firebase.auth().signOut();
       }
     })
   }
 
-  getMasterAdminContact = () => {
+  const getMasterAdminContact = () => {
     let premise = global.premiseLocation;
     if(premise.includes("(")){
       premise = global.premiseLocation.substring(0, global.premiseLocation.indexOf("(")).trim()
@@ -130,11 +210,11 @@ export default class HomeScreen extends React.Component{
       snapshot.docs.forEach(doc => {
         masteradminData.push(doc.data().contact_no)
       })
-      this.setState({alertRecipients: masteradminData})
+      setAlertRecipients(masteradminData);
     })
   }
 
-  compareTimestamp(a, b){
+  const compareTimestamp = (a, b) => {
     if(a.sign_in_time > b.sign_in_time){
         return -1;
     }else if(a.sign_in_time < b.sign_in_time){
@@ -144,19 +224,15 @@ export default class HomeScreen extends React.Component{
     }
   }
 
-  sortEntries = () => {
-      let visitors = this.state.visitorState;
-      let staffs = this.state.staffState;
-
-      visitors.sort(this.compareTimestamp)
-      staffs.sort(this.compareTimestamp)
-
-      this.setState({visitorState: visitors, staffState: staffs})
+  const sortEntries = () => {
+    const sortedVisitors = [...visitorState].sort(compareTimestamp);
+    const sortedStaffs = [...staffState].sort(compareTimestamp);
+    setVisitorState(sortedVisitors);
+    setStaffState(sortedStaffs);
   }
 
-  sendAlert = async () => {
-    const { alertRecipients, alertIncident, alertPerson, alertPersonNo } = this.state;
-    if(alertIncident == ''){
+  const sendAlert = async () => {
+    if(alertIncident === ''){
       Alert.alert("Please select what is the alert.")
     }else{
       const isAvailable = await SMS.isAvailableAsync();
@@ -169,11 +245,13 @@ export default class HomeScreen extends React.Component{
     }
   }
 
-  toggleModal = (visitorName, visitorNo) => {
-    this.setState({visible: true, alertPerson: visitorName, alertPersonNo: visitorNo})
+  const toggleModal = (visitorName, visitorNo) => {
+    setVisible(true);
+    setAlertPerson(visitorName);
+    setAlertPersonNo(visitorNo);
   };
 
-  offlinePictureSignOut = (id) => {
+  const offlinePictureSignOut = (id) => {
     firebase.firestore()
       .collection('Entries')
       .doc(id)
@@ -187,143 +265,127 @@ export default class HomeScreen extends React.Component{
     Alert.alert("Entry signed-out.")
   }
 
-  //ui renders//
-  renderList = () => {
-    let renderVisitorsList = this.state.visitorState.map((visitor, key) => {
-      return(
-        <TouchableWithoutFeedback key={key}>
-          <Block>
-          <Divider/>
-          <Block style={styles.testitemContainer}>
-            <View style={styles.testavatarContainer}>
-              <Avatar
-                size="large"
-                title="NA"
-                source={{uri:visitor.pic !== ""  ? visitor.pic : 'https://via.placeholder.com/'}}
-                activeOpacity={0.7}
-              >
-              <MaterialCommunityIcons style={{position:"absolute", top:-10, left: -13,}} name="alert-circle" size={24} color="#CE5555" onPress={() => this.toggleModal(visitor.name, visitor.contact_no)}/>
-              </Avatar>
-            </View>
-            <View style={{flex:1,}}>
-              <Text style={styles.testitemName} numberOfLines={1}>{visitor.name}</Text>
-              <Text style={styles.testitemLoc} numberOfLines={1}>{visitor.company}</Text>
-              <View style={styles.testitemPurpose} >
-                <Text numberOfLines={1}>{visitor.purpose}</Text>
-              </View>
-            </View>
-            <View style={styles.testbuttonContainer}>
-              <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () =>
-                this.props.navigation.navigate('PictureSignOut',{docID: visitor.id})
-              : () => this.offlinePictureSignOut(visitor.id)}
-              >
-                <Text style={styles.signoutButton}>SIGN OUT</Text>
-              </Button>
-            </View>
-          </Block>
-          </Block>
-        </TouchableWithoutFeedback>
-      );
-    })
-
-    let renderStaffsList = this.state.staffState.map((staff, key) => {
-      return(
-        <TouchableWithoutFeedback key={key}>
-          <Block>
-          <Divider/>
-          <Block style={styles.testitemContainer}>
-            <View style={styles.testavatarContainer}>
-              <Avatar
-                size="large"
-                source={{uri:staff.pic !== "" ? staff.pic : 'https://via.placeholder.com/'}}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons style={{position:"absolute", top:-10, left: -13,}} name="alert-circle" size={24} color="#CE5555" onPress={() => this.toggleModal(staff.name, staff.contact_no)}/>
-              </Avatar>
-            </View>
-            <View style={{flex:1,}}>
-              <Text style={styles.testitemName} numberOfLines={1}>{staff.name}</Text>
-              <Text style={styles.testitemLoc} numberOfLines={1}>{staff.company}</Text>
-              <View style={styles.testitemPurpose}>
-                <Text numberOfLines={1}>{staff.purpose}</Text>
-              </View>
-            </View>
-            <View style={styles.testbuttonContainer}>
-              <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () =>
-                this.props.navigation.navigate('PictureSignOut',{docID: staff.id})
-              : () => this.offlinePictureSignOut(staff.id)}
-              >
-                <Text style={styles.signoutButton}>SIGN OUT</Text>
-              </Button>
-            </View>
-          </Block>
-          </Block>
-        </TouchableWithoutFeedback>
-      );
-    })
-
+  const renderVisitorsList = visitorState.map((visitor, key) => {
     return(
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} >
-        <Modal isVisible={this.state.visible} onBackdropPress={() => this.setState({ visible: false })}>
-          <View style={{justifyContent:'center', marginHorizontal: 40, padding: 40, backgroundColor: 'white', borderRadius: 20}}>
-            <DropDownPicker
-              open={this.state.alertDropdownOpen}
-              value={this.state.alertIncident} // The selected value
-              items={[
-                {label: 'Not signed out', value: 'not signed out'}
-              ]}
-              setOpen={(open) => this.setState({ alertDropdownOpen: open })}
-              setValue={(callback) =>
-                  this.setState((state) => ({
-                    alertIncident: callback(state.alertIncident),
-                  }))
-              }
-              containerStyle={{height: 40}}
-              // defaultIndex={0}
-              defaultValue={'not sign out'}
-              dropDownMaxHeight={120}
-              onChangeItem={(item) => {
-                this.setState({ alertIncident: item.value })
-              }}
-              placeholder="Select an alert"
-            />
-            <Button style={{marginTop: 100}} buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.sendAlert()}>
-              ALERT ADMIN
-            </Button>
-          </View>
-        </Modal>
-        <Text style={styles.testbranchTitle}>Premise {'\n'}— {global.premiseLocation}</Text>
-        <Text style={styles.testlistTitle}>VISITORS — {this.state.visitorState.length}</Text>
-        <Divider style={{height: 1}}/>
-        {renderVisitorsList}
+        <TouchableWithoutFeedback key={key}>
+          <Block>
+            <Divider/>
+            <Block style={styles.testitemContainer}>
+              <View style={styles.testavatarContainer}>
+                <Avatar
+                    size="large"
+                    title="NA"
+                    source={{uri:visitor.pic !== ""  ? visitor.pic : 'https://via.placeholder.com/'}}
+                    activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons style={{position:"absolute", top:-10, left: -13,}} name="alert-circle" size={24} color="#CE5555" onPress={() => toggleModal(visitor.name, visitor.contact_no)}/>
+                </Avatar>
+              </View>
+              <View style={{flex:1,}}>
+                <Text style={styles.testitemName} numberOfLines={1}>{visitor.name}</Text>
+                <Text style={styles.testitemLoc} numberOfLines={1}>{visitor.company}</Text>
+                <View style={styles.testitemPurpose} >
+                  <Text numberOfLines={1}>{visitor.purpose}</Text>
+                </View>
+              </View>
+              <View style={styles.testbuttonContainer}>
+                <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () =>
+                        navigation.navigate('PictureSignOut',{docID: visitor.id})
+                    : () => offlinePictureSignOut(visitor.id)}
+                >
+                  <Text style={styles.signoutButton}>SIGN OUT</Text>
+                </Button>
+              </View>
+            </Block>
+          </Block>
+        </TouchableWithoutFeedback>
+    );
+  })
 
-        <View style={{height: 50}}></View>
-        <Text style={styles.testlistTitle}>STAFF — {this.state.staffState.length}</Text>
-        <Divider style={{height: 1}}/>
-        {renderStaffsList}
+  const renderStaffsList = staffState.map((staff, key) => {
+    return(
+        <TouchableWithoutFeedback key={key}>
+          <Block>
+            <Divider/>
+            <Block style={styles.testitemContainer}>
+              <View style={styles.testavatarContainer}>
+                <Avatar
+                    size="large"
+                    source={{uri:staff.pic !== "" ? staff.pic : 'https://via.placeholder.com/'}}
+                    activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons style={{position:"absolute", top:-10, left: -13,}} name="alert-circle" size={24} color="#CE5555" onPress={() => toggleModal(staff.name, staff.contact_no)}/>
+                </Avatar>
+              </View>
+              <View style={{flex:1,}}>
+                <Text style={styles.testitemName} numberOfLines={1}>{staff.name}</Text>
+                <Text style={styles.testitemLoc} numberOfLines={1}>{staff.company}</Text>
+                <View style={styles.testitemPurpose}>
+                  <Text numberOfLines={1}>{staff.purpose}</Text>
+                </View>
+              </View>
+              <View style={styles.testbuttonContainer}>
+                <Button key={key} mode="outlined" onPress={global.internetConnectivity ? () =>
+                        navigation.navigate('PictureSignOut',{docID: staff.id})
+                    : () => offlinePictureSignOut(staff.id)}
+                >
+                  <Text style={styles.signoutButton}>SIGN OUT</Text>
+                </Button>
+              </View>
+            </Block>
+          </Block>
+        </TouchableWithoutFeedback>
+    );
+  })
 
-        <View style={styles.signOutContainer}>
-        <Button icon='logout' buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => this.unsubscribeListeners()}>
-          LOG OUT
-        </Button>
-        </View>
-      </ScrollView>
-    )
-  }
-
-  render(){
-    if (this.state.loading) {
-      return (
+  if (loading) {
+    return (
         <View style={{flex: 1, justifyContent: "center"}}>
           <ActivityIndicator color='rgb(21, 31, 53)' size="large"/>
         </View>
-      );
-    } else {
-      return (
-        this.renderList()
-      );
-    }
+    );
   }
+
+  return(
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} >
+      <Modal isVisible={visible} onBackdropPress={() => setVisible(false)}>
+        <View style={{justifyContent:'center', marginHorizontal: 40, padding: 40, backgroundColor: 'white', borderRadius: 20}}>
+          <DropDownPicker
+            open={alertDropdownOpen}
+            value={alertIncident} // The selected value
+            items={[
+              {label: 'Not signed out', value: 'not signed out'}
+            ]}
+            setOpen={(open) => setAlertDropdownOpen(open)}
+            setValue={(callback) => setAlertIncident(callback(alertIncident))}
+            containerStyle={{height: 40}}
+            defaultValue={'not sign out'}
+            dropDownMaxHeight={120}
+            onChangeValue={(value) => {setAlertIncident(value)}}
+            placeholder="Select an alert"
+          />
+          <Button style={{marginTop: 100}} buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => sendAlert()}>
+            ALERT ADMIN
+          </Button>
+        </View>
+      </Modal>
+      <Text style={styles.testbranchTitle}>Premise {'\n'}— {global.premiseLocation}</Text>
+      <Text style={styles.testlistTitle}>VISITORS — {visitorState.length}</Text>
+      <Divider style={{height: 1}}/>
+      {renderVisitorsList}
+
+      <View style={{height: 50}}></View>
+      <Text style={styles.testlistTitle}>STAFF — {staffState.length}</Text>
+      <Divider style={{height: 1}}/>
+      {renderStaffsList}
+
+      <View style={styles.signOutContainer}>
+      <Button icon='logout' buttonColor='rgb(21, 31, 53)' mode="contained" onPress={() => unsubscribeListeners()}>
+        LOG OUT
+      </Button>
+      </View>
+    </ScrollView>
+  )
 }
 
 
