@@ -1,6 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
+// import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { Platform, StatusBar, SafeAreaView, StyleSheet } from 'react-native';
 import { SimpleLineIcons } from '@expo/vector-icons';
@@ -22,13 +23,13 @@ import GuardActivityScreen from '../screens/guard/GuardActivityScreen';
 import IncidentReportScreen from '../screens/guard/IncidentReportScreen';
 import OutsiderVehicleRecordScreen from '../screens/outsidervehiclerecord/OutsiderVehicleRecordScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 function GuardStack() {
   return (
     <Stack.Navigator
       initialRouteName="GuardHome"
       screenOptions={{
-        headerMode: 'none',
+        headerShown: false
       }}
     >
       <Stack.Screen
@@ -59,7 +60,7 @@ function SignInStack() {
     <Stack.Navigator
       initialRouteName="SignInSelect"
       screenOptions={{
-        headerMode: 'none',
+        headerShown: false
       }}
     >
       <Stack.Screen
@@ -99,7 +100,7 @@ function SignOutStack() {
     <Stack.Navigator
       initialRouteName="Home"
       screenOptions={{
-        headerMode: 'none',
+        headerShown: false
       }}
     >
       <Stack.Screen
@@ -177,10 +178,9 @@ function HomeStack(){
       sceneContainerStyle={{backgroundColor: '#FFF'}}
       >
       <Tab.Screen name="HomeSignOut" component={SignOutStack} options={{ tabBarLabel: 'Home'}} listeners={{tabPress: (e) => {resetStack("Home")}}}/>
-      <Tab.Screen name="RollCall" component={RollCallScreen} options={{ tabBarLabel: 'Roll Call'}} />
       <Tab.Screen name="SignIn" component={SignInStack} options={{ tabBarLabel: 'Sign in'}} listeners={{tabPress: (e) => {resetStack("SignInSelect")}}}/>
       <Tab.Screen name="EZSignIn" component={EZSignInScreen} options={{ tabBarLabel: 'EZ Sign In'}} />
-
+      <Tab.Screen name="RollCall" component={RollCallScreen} options={{ tabBarLabel: 'Roll Call'}} />
       <Tab.Screen name="Guard" component={GuardStack} options={{ tabBarLabel: 'Guard'}} listeners={{tabPress: (e) => {resetStack("GuardHome")}}}/>
     </Tab.Navigator>
     </SafeAreaView>

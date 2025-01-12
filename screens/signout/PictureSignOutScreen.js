@@ -1,7 +1,7 @@
-import React from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import { StyleSheet, View, Dimensions, TouchableOpacity, ImageBackground } from 'react-native';
 import { Text, Button } from 'react-native-paper';
-import { Camera } from 'expo-camera';
+import {CameraView, useCameraPermissions} from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import firebase from 'firebase/compat/app';
@@ -9,30 +9,35 @@ import 'firebase/compat/firestore';
 import 'firebase/compat/storage';
 import * as ImageManipulator from "expo-image-manipulator";
 
-const { height, width } = Dimensions.get('screen');
+const { width } = Dimensions.get('screen');
 
-export default class PictureSignOutScreen extends React.Component {
-  constructor(props){
-    super(props);
-    this.state = {
-      hasCameraPermission: null, 
-      type: Camera.Constants.Type.front, 
-      photo: null,
-      resizedPhoto: null,
-      uploading: false,
-      image: null,
-    }
-  } 
+export default function PictureSignOutScreen({navigation, route}){
+  const [cameraFacing, setCameraFacing] = useState('front');
+  const [resizedPhoto, setResizedPhoto] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef(null);
+  // constructor(props){
+  //   super(props);
+  //   this.state = {
+  //     hasCameraPermission: null,
+  //     type: Camera.Constants.Type.front,
+  //     photo: null,
+  //     resizedPhoto: null,
+  //     uploading: false,
+  //     image: null,
+  //   }
+  // }
 
-  async componentDidMount() {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    this.setState({ hasCameraPermission: status === 'granted' });
-  }
+  // async componentDidMount() {
+  //   const { status } = await Camera.requestCameraPermissionsAsync();
+  //   this.setState({ hasCameraPermission: status === 'granted' });
+  // }
 
-  submitData = () => {
-    const { navigation } = this.props;
+  const submitData = () => {
     const docID = this.props.route.params.docID;
-    
+
     firebase.firestore()
     .collection('Entries')
     .doc(docID)
@@ -50,7 +55,7 @@ export default class PictureSignOutScreen extends React.Component {
   submitImage = async () => {
     if(this.state.photo == null){
       Alert.alert('Please take a photo first')
-    } else { 
+    } else {
       this.setState({uploading: true})
       try {
         let uploadUrl = await uploadImageAsync(this.state.resizedPhoto);
@@ -62,7 +67,7 @@ export default class PictureSignOutScreen extends React.Component {
         if(this.state.image !== null){
           this.submitData();}
       }
-        
+
     }
   };
 
@@ -95,7 +100,7 @@ export default class PictureSignOutScreen extends React.Component {
   }
   renderCamera(){
     return(
-      <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}> 
+      <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}>
         <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
             <Ionicons name="camera" size={50} color="white" />
         </TouchableOpacity>
@@ -108,7 +113,7 @@ export default class PictureSignOutScreen extends React.Component {
         <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={() => this.setState({ photo: null })}>
             <Ionicons name="close-outline" size={50} color="white" />
         </TouchableOpacity>
-      </ImageBackground> 
+      </ImageBackground>
     )
   }
 
@@ -133,7 +138,7 @@ export default class PictureSignOutScreen extends React.Component {
           <View style={styles.headerContainer}>
             <Text style={styles.headerTitle}>PLEASE CONFIRM YOUR IDENTITY BY TAKING A PHOTO</Text>
           </View>
-          
+
           <View style={styles.cameraContainer}>
             {(this.state.photo == null) ? this.renderCamera() : this.renderImage()}
           </View>
@@ -142,17 +147,17 @@ export default class PictureSignOutScreen extends React.Component {
               CLICK TO TAKE PICTURE
             </Button>
           </View>
-          
+
           <View style={styles.buttonVerticalContainer}>
             <View style={styles.buttonHorizontalContainer}>
               <View style={styles.buttonContainer}>
-                <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() => 
+                <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
                   this.props.navigation.goBack()}>
                   BACK
                 </Button>
               </View>
               <View style={styles.buttonContainer}>
-                <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() => 
+                <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
                   this.submitImage()} disabled={this.state.uploading}>
                   SIGN OUT
                 </Button>
@@ -168,7 +173,7 @@ export default class PictureSignOutScreen extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
+    flex: 1,
   },
 
   headerContainer:{
@@ -181,20 +186,20 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
-    marginHorizontal: 20, 
+    marginHorizontal: 20,
   },
 
   cameraContainer: {
-    alignSelf: 'center', 
-    width: width * 0.7, 
-    height: width * 0.7, 
-    backgroundColor: 'gray', 
+    alignSelf: 'center',
+    width: width * 0.7,
+    height: width * 0.7,
+    backgroundColor: 'gray',
     marginVertical: 20
   },
   cameraFlipDeleteButton: {
     flexDirection: 'row-reverse',
     marginHorizontal: 20,
-    marginVertical: 10, 
+    marginVertical: 10,
   },
   cameraTakePictureButton: {
     alignSelf: 'center',
@@ -207,14 +212,14 @@ const styles = StyleSheet.create({
     marginTop: 50
   },
   buttonHorizontalContainer: {
-    flex: 1, 
+    flex: 1,
     flexDirection: 'row',
     flexWrap: "wrap",
     justifyContent: 'space-between',
   },
   buttonContainer:{
     marginVertical: 15,
-    marginHorizontal: 15, 
+    marginHorizontal: 15,
     justifyContent: 'flex-end'
   },
   buttonText: {
@@ -250,7 +255,7 @@ async function uploadImageAsync(uri) {
     .ref()
     .child('entries/' + uuidv4() + '.jpg');
     const snapshot = await ref.put(blob, {cacheControl: 'private, max-age=7200', contentType: 'image/jpg'});
-  
+
   blob.close();
 
   return await snapshot.ref.getDownloadURL();

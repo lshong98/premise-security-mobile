@@ -85,11 +85,9 @@ export default function HomeScreen({ navigation }){
                       contact_no: doc.data().contact_no
                     });
                 });
-
-                setVisitorState(visitorSource);
-                setStaffState(staffSource);
+                setVisitorState([...visitorSource].sort(compareTimestamp));
+                setStaffState([...staffSource].sort(compareTimestamp));
                 setLoading(false);
-                sortEntries();
               }
             });
         global.subscribers.push(unsubscribeHome);
@@ -112,75 +110,6 @@ export default function HomeScreen({ navigation }){
       if (unsubscribeHome) unsubscribeHome();
     };
   }, []);
-
-  // async componentDidMount(){
-  //   this._isMounted = true;
-  //   let premises = JSON.parse(await AsyncStorage.getItem('allpremises'));
-  //   let premiseList = [];
-  //
-  //   premises.forEach(premise => {
-  //     if(premise.includes("(")){
-  //       premise = premise.substring(0, premise.indexOf('('))
-  //     }
-  //
-  //     if(!premiseList.includes(premise.trim())){
-  //       premiseList.push(premise.trim())
-  //     }
-  //   })
-  //
-  //   //global variables
-  //   global.premiseLocation = await AsyncStorage.getItem('location')
-  //   let unsubscribeNetwork = NetInfo.addEventListener(state => {
-  //     global.internetConnectivity = state.isConnected && state.isInternetReachable;
-  //   });
-  //
-  //   let unsubscribeHome = firebase.firestore()
-  //   .collection('Entries')
-  //   .where('sign_out_time', '==', '')
-  //   .where('premise', '==', global.premiseLocation)
-  //   .onSnapshot(snapshot => {
-  //     visitorSource = [];
-  //     staffSource = [];
-  //
-  //     if(this._isMounted){
-  //       snapshot.docs.forEach(doc => {
-  //         if(!doc.data().isVisitor)
-  //           staffSource.push({
-  //             id: doc.id,
-  //             name: doc.data().name,
-  //             company: doc.data().company,
-  //             purpose: doc.data().visit_purpose,
-  //             sign_in_time: doc.data().sign_in_time,
-  //             pic: doc.data().sign_in_photo,
-  //             contact_no: doc.data().contact_no})
-  //         else
-  //           visitorSource.push({
-  //             id: doc.id,
-  //             name: doc.data().name,
-  //             company: doc.data().company,
-  //             purpose: doc.data().visit_purpose,
-  //             sign_in_time: doc.data().sign_in_time,
-  //             pic: doc.data().sign_in_photo,
-  //             contact_no: doc.data().contact_no})
-  //       })
-  //       this.setState({
-  //         visitorState: visitorSource,
-  //         staffState: staffSource,
-  //         loading: false
-  //       }, () => { this.sortEntries() })
-  //     }
-  //   })
-  //
-  //   global.subscribers.push(unsubscribeHome)
-  //   global.subscribers.push(unsubscribeNetwork)
-  //
-  //   this.getMasterAdminContact()
-  // }
-
-  // componentWillUnmount() {
-  //   this._isMounted = false;
-  //   this.setState({dialog: false})
-  // }
 
   const unsubscribeListeners = async () => {
     let itemsProcessed = 0;
@@ -222,13 +151,6 @@ export default function HomeScreen({ navigation }){
     }else{
         return 0;
     }
-  }
-
-  const sortEntries = () => {
-    const sortedVisitors = [...visitorState].sort(compareTimestamp);
-    const sortedStaffs = [...staffState].sort(compareTimestamp);
-    setVisitorState(sortedVisitors);
-    setStaffState(sortedStaffs);
   }
 
   const sendAlert = async () => {
