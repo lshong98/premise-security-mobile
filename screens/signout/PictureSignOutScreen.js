@@ -32,142 +32,149 @@ export default function PictureSignOutScreen({navigation, route}){
 
   // async componentDidMount() {
   //   const { status } = await Camera.requestCameraPermissionsAsync();
-  //   this.setState({ hasCameraPermission: status === 'granted' });
+  //   this.setState({ hasCameraPermission: sta tus === 'granted' });
   // }
 
-  const submitData = () => {
-    const docID = this.props.route.params.docID;
+  const submitData = (imageUrl) => {
+    const docID = route.params.docID;
 
     firebase.firestore()
     .collection('Entries')
     .doc(docID)
     .update({
       sign_out_time: firebase.firestore.Timestamp.fromDate(new Date()),
-      sign_out_photo: this.state.image,
+      sign_out_photo: imageUrl,
     })
     .then(() => {
-      this.props.navigation.navigate('Home')
+      navigation.navigate('Home')
     }, (error) => {
       Alert.alert(error)
     });
   }
 
-  submitImage = async () => {
-    if(this.state.photo == null){
+  const submitImage = async () => {
+    if(photo == null){
       Alert.alert('Please take a photo first')
     } else {
-      this.setState({uploading: true})
+      setUploading(true);
       try {
-        let uploadUrl = await uploadImageAsync(this.state.resizedPhoto);
-        this.setState({ image: uploadUrl });
+        let uploadUrl = await uploadImageAsync(resizedPhoto);
+        await submitData(uploadUrl);
       } catch (e) {
         console.log(e);
         alert('Upload failed, please check your internet connection or try again');
       } finally {
-        if(this.state.image !== null){
-          this.submitData();}
+        setUploading(false);
       }
 
     }
   };
 
-  cameraFlip = () => {
-    this.setState({
-      type:
-        this.state.type === Camera.Constants.Type.back
-          ? Camera.Constants.Type.front
-          : Camera.Constants.Type.back,
-    });
+  const cameraFlip = () => {
+    setCameraFacing((current) => (current === 'back' ? 'front' : 'back'));
   };
 
-  resizePhoto = async (photo) => {
+  const resizePhoto = async (photo) => {
     const manipResult = await ImageManipulator.manipulateAsync(
       photo,
       [{flip: ImageManipulator.FlipType.Horizontal}, {resize: {width: 250, height: 250} }],
-      { compress: 1, format: ImageManipulator.SaveFormat.JPG }
+      { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
     );
-    this.setState({resizedPhoto: manipResult.uri})
+    setResizedPhoto(manipResult.uri);
   };
 
-  cameraTakePicture = async () => {
-    if(this.camera){
-      await this.camera.takePictureAsync({skipProcessing: true})
-      .then((capturephoto)=>{
-        this.resizePhoto(capturephoto.uri)
-        this.setState({photo: capturephoto.uri})
-      })
+  const cameraTakePicture = async () => {
+    if(cameraRef.current){
+      const photoData  = await cameraRef.current.takePictureAsync({skipProcessing: true});
+      await resizePhoto(photoData.uri);
+      setPhoto(photoData.uri);
     }
   }
-  renderCamera(){
-    return(
-      <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}>
-        <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
-            <Ionicons name="camera" size={50} color="white" />
-        </TouchableOpacity>
-      </Camera>
-    );
-  }
-  renderImage(){
-    return(
-      <ImageBackground resizeMode='cover' style={{flex: 1, transform: [{scaleX: -1}]}} source={{uri: this.state.photo}}>
-        <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={() => this.setState({ photo: null })}>
-            <Ionicons name="close-outline" size={50} color="white" />
-        </TouchableOpacity>
-      </ImageBackground>
-    )
+  // renderCamera(){
+  //   return(
+  //     <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}>
+  //       <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
+  //           <Ionicons name="camera" size={50} color="white" />
+  //       </TouchableOpacity>
+  //     </Camera>
+  //   );
+  // }
+  // renderImage(){
+  //   return(
+  //     <ImageBackground resizeMode='cover' style={{flex: 1, transform: [{scaleX: -1}]}} source={{uri: this.state.photo}}>
+  //       <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={() => this.setState({ photo: null })}>
+  //           <Ionicons name="close-outline" size={50} color="white" />
+  //       </TouchableOpacity>
+  //     </ImageBackground>
+  //   )
+  // }
+
+  if (!permission) {
+    return <View />;
   }
 
-  render(){
-    const { hasCameraPermission } = this.state;
-    if (hasCameraPermission === null) {
-      return <View></View>;
-    } else if (hasCameraPermission === false) {
-      return (
+  if (!permission.granted) {
+    return (
         <View style={styles.container}>
-          <Text style={{textAlign: 'center'}}>No access to camera</Text>
+          <Text style={styles.message}>We need your permission to use the camera</Text>
           <View style={{position: 'absolute', bottom: 20 , left: 20}}>
-            <Button style={{alignSelf: 'flex-start'}} buttonColor={"#2F465B"} mode="contained" onPress={() => this.props.navigation.navigate('SignInCompany')}>
+            <Button style={{alignSelf: 'flex-start'}} buttonColor={"#2F465B"} mode="contained" onPress={() => navigation.goBack()}>
+              BACK
+            </Button>
+            <Button style={{alignSelf: 'flex-end'}} mode="contained" onPress={requestPermission}>Grant Permission</Button>
+          </View>
+        </View>
+    );
+  }
+
+  return(
+    <View style={styles.container}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>PLEASE CONFIRM YOUR IDENTITY BY TAKING A PHOTO</Text>
+      </View>
+
+      <View style={styles.cameraContainer}>
+        {(photo == null) ?
+            (
+                <CameraView style={{flex: 1}} facing={cameraFacing} ref={cameraRef}>
+                  <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={cameraFlip}>
+                    <Ionicons name="camera" size={50} color="white" />
+                  </TouchableOpacity>
+                </CameraView>
+            ):
+            (
+                <ImageBackground resizeMode='cover' style={{flex: 1, transform: [{scaleX: -1}]}} source={{uri: photo}}>
+                  <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={() => setPhoto(null)}>
+                      <Ionicons name="close-outline" size={50} color="white" />
+                  </TouchableOpacity>
+                </ImageBackground>
+            )
+        }
+      </View>
+      <View style={styles.cameraTakePictureButton}>
+        <Button buttonColor={"#2F465B"} mode="contained" onPress={() => {(photo == null) ? cameraTakePicture() : null}}>
+          CLICK TO TAKE PICTURE
+        </Button>
+      </View>
+
+      <View style={styles.buttonVerticalContainer}>
+        <View style={styles.buttonHorizontalContainer}>
+          <View style={styles.buttonContainer}>
+            <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
+              navigation.goBack()}>
               BACK
             </Button>
           </View>
-        </View>
-      );
-    } else {
-      return(
-        <View style={styles.container}>
-          <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>PLEASE CONFIRM YOUR IDENTITY BY TAKING A PHOTO</Text>
-          </View>
-
-          <View style={styles.cameraContainer}>
-            {(this.state.photo == null) ? this.renderCamera() : this.renderImage()}
-          </View>
-          <View style={styles.cameraTakePictureButton}>
-            <Button buttonColor={"#2F465B"} mode="contained" onPress={() => {(this.state.photo == null) ? this.cameraTakePicture() : null}}>
-              CLICK TO TAKE PICTURE
+          <View style={styles.buttonContainer}>
+            <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
+              submitImage()} disabled={uploading}>
+              SIGN OUT
             </Button>
           </View>
-
-          <View style={styles.buttonVerticalContainer}>
-            <View style={styles.buttonHorizontalContainer}>
-              <View style={styles.buttonContainer}>
-                <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
-                  this.props.navigation.goBack()}>
-                  BACK
-                </Button>
-              </View>
-              <View style={styles.buttonContainer}>
-                <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
-                  this.submitImage()} disabled={this.state.uploading}>
-                  SIGN OUT
-                </Button>
-              </View>
-            </View>
-          </View>
         </View>
-      );
-    }
-  }
+      </View>
+    </View>
+  );
 }
 
 
