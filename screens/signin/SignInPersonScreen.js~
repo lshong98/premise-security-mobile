@@ -257,7 +257,7 @@ export default class SignInPersonScreen extends React.Component {
             {this.renderSearchList()}
             <View style={styles.buttonVerticalContainer}>
               <View style={styles.buttonHorizontalContainer}>
-                <View style={styles.buttonContainerLeft}>
+                <View style={styles.buttonContainer}>
                   <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
                     this.props.navigation.navigate('SignInCompany',{
                       isVisitor: this.props.route.params.isVisitor
@@ -265,7 +265,7 @@ export default class SignInPersonScreen extends React.Component {
                     BACK
                   </Button>
                 </View>
-                <View style={styles.buttonContainerRight}>
+                <View style={styles.buttonContainer}>
                   {global.internetConnectivity ?
                   <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
                     this.props.navigation.navigate('OtherPerson',{
@@ -314,17 +314,10 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: 'space-between',
   },
-  buttonContainerRight: {
+  buttonContainer: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    // Adjust these values as needed
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Add extra padding for iOS devices
-  },
-  buttonContainerLeft: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
     // Adjust these values as needed
     paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Add extra padding for iOS devices
   },

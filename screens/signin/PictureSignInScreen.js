@@ -55,6 +55,7 @@ export default function PictureSignInScreen({navigation, route}) {
     let personMeeting = route.params.personMeeting
     let personDepartment = route.params.personDepartment
     let walkinArea = route.params.walkinArea
+    let carPlateNo = route.params.carPlateNo
 
     if(!signedIn){
       if(!isVisitor){
@@ -81,10 +82,10 @@ export default function PictureSignInScreen({navigation, route}) {
         sign_in_photo: imageUrl,
         sign_out_time: '',
         sign_out_photo: '',
-        isVisitor: isVisitor
+        isVisitor: isVisitor,
+        carPlateNo: carPlateNo
       })
       .then(() => {
-        console.log("Document successfully written!");
         if(route.params.from === 'EZSignIn'){
           firebase.firestore()
           .collection("EZSignIns")
@@ -93,7 +94,6 @@ export default function PictureSignInScreen({navigation, route}) {
         }
         const counterRef = firebase.firestore().collection('Counters').doc('Entries');
         counterRef.update({ "counter": firebase.firestore.FieldValue.increment(1) });
-        console.log("Document2 successfully written!");
         navigation.navigate('HomeSignOut')
       }, (error) => {
         console.log(error);

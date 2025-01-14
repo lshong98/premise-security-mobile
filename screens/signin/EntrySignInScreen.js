@@ -14,6 +14,7 @@ export default function EntrySignInScreen({navigation, route}) {
   const [ visitPurpose, setVisitPurpose ] = useState('');
   const [ personMeeting, setPersonMeeting ] = useState('');
   const [ personDepartment, setPersonDepartment ] = useState('');
+  const [ carPlateNo, setCarPlateNo ] = useState('');
   const [ otherPurpose, setOtherPurpose ] = useState('');
   const [ walkingArea, setWalkingArea ] = useState('');
   const [ consent, setConsent ] = useState(false);
@@ -63,6 +64,8 @@ export default function EntrySignInScreen({navigation, route}) {
       Alert.alert('Please state who you are meeting.');
     }else if(visitPurpose === 'Walk-in customer' && walkingArea === ''){
       Alert.alert('Please state walk-in area.');
+    }else if(carPlateNo === '') {
+      Alert.alert('Please key in car plate no.')
     }else if(consent !== true) {
       Alert.alert('Please give us consent to use your information.')
     }else {
@@ -88,6 +91,7 @@ export default function EntrySignInScreen({navigation, route}) {
         personMeeting: personMeeting,
         personDepartment: personDepartment,
         walkinArea: walkingArea,
+        carPlateNo: carPlateNo,
         from: 'EntrySignIn',
         isVisitor: route.params.isVisitor
       });
@@ -244,6 +248,17 @@ export default function EntrySignInScreen({navigation, route}) {
           onChangeText={text => setOtherPurpose(text)}
         />
       </View> : null}
+      <View style={{
+        ...styles.inputContainer}}>
+        <Text style={styles.inputLabel}>Car Plate No</Text>
+        <TextInput
+            mode='outlined'
+            style={styles.inputTextField}
+            value={carPlateNo}
+            onChangeText={text => setCarPlateNo(text)}
+            editable={true}
+        />
+      </View>
       <View style={styles.consentContainer}>
         <Switch
           value={consent}

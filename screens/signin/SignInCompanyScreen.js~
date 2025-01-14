@@ -185,6 +185,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     flexWrap: "wrap",
   },
+  // buttonContainer:{
+  //   marginVertical: 10,
+  //   marginHorizontal: 10,
+  //   justifyContent: 'flex-end'
+  // },
   buttonContainer: {
     position: 'absolute',
     bottom: 20,
