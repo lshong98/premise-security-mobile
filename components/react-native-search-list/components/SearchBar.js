@@ -62,23 +62,41 @@ export default class SearchBar extends Component {
       isShowHolder: true,
       animatedValue: new Animated.Value(0)
     }
+    this._isMounted = false;
+    this.animation = null;
+  }
+
+  componentDidMount() {
+    this._isMounted = true;
+  }
+
+  componentWillUnmount() {
+    this._isMounted = false;
+    if (this.animation) {
+      this.animation.stop();
+    }
   }
 
   onChange (str) {
+    if (!this._isMounted) return;
     this.props.onChange && this.props.onChange(str)
     this.setState({ value: str })
   }
 
   onBlur () {
+    if (!this._isMounted) return;
     this.props.onBlur && this.props.onBlur()
   }
 
   onFocus () {
+    if (!this._isMounted) return;
     this.props.onFocus && this.props.onFocus()
     this.searchingAnimation(true)
   }
 
   searchingAnimation (isSearching) {
+    if (!this._isMounted) return;
+    
     let toVal = 0
 
     if (isSearching) {
@@ -89,18 +107,29 @@ export default class SearchBar extends Component {
       toVal = 0
     }
 
-    Animated.timing(this.state.animatedValue, {
+    if (this.animation) {
+      this.animation.stop();
+    }
+
+    this.animation = Animated.timing(this.state.animatedValue, {
       duration: Theme.duration.toggleSearchBar,
       toValue: toVal,
       useNativeDriver: true
-    }).start(() => {
-      this.setState({isShowHolder: !isSearching})
+    });
+
+    this.animation.start(() => {
+      if (this._isMounted) {
+        this.setState({isShowHolder: !isSearching})
+      }
     })
   }
 
   cancelSearch () {
-    this.refs.input.clear()
-    this.refs.input.blur()
+    if (!this._isMounted) return;
+    if (this.refs.input) {
+      this.refs.input.clear()
+      this.refs.input.blur()
+    }
     this.onChange('')
     this.searchingAnimation(false)
     this.props.onClickCancel && this.props.onClickCancel()

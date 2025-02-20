@@ -1,22 +1,22 @@
 PODS:
   - boost (1.84.0)
   - DoubleConversion (1.1.6)
-  - EXConstants (17.0.6):
+  - EXConstants (17.0.7):
     - ExpoModulesCore
   - EXImageLoader (5.0.0):
     - ExpoModulesCore
     - React-Core
-  - Expo (52.0.35):
+  - Expo (52.0.36):
     - ExpoModulesCore
-  - ExpoAsset (11.0.3):
+  - ExpoAsset (11.0.4):
     - ExpoModulesCore
-  - ExpoCamera (16.0.16):
+  - ExpoCamera (16.0.17):
     - ExpoModulesCore
     - ZXingObjC/OneD
     - ZXingObjC/PDF417
-  - ExpoFileSystem (18.0.10):
+  - ExpoFileSystem (18.0.11):
     - ExpoModulesCore
-  - ExpoFont (13.0.3):
+  - ExpoFont (13.0.4):
     - ExpoModulesCore
   - ExpoImage (2.0.6):
     - ExpoModulesCore
@@ -28,11 +28,11 @@ PODS:
     - EXImageLoader
     - ExpoModulesCore
     - SDWebImageWebPCoder
-  - ExpoKeepAwake (14.0.2):
+  - ExpoKeepAwake (14.0.3):
     - ExpoModulesCore
   - ExpoLinearGradient (14.0.2):
     - ExpoModulesCore
-  - ExpoLocation (18.0.6):
+  - ExpoLocation (18.0.7):
     - ExpoModulesCore
   - ExpoModulesCore (2.2.2):
     - DoubleConversion
@@ -2106,18 +2106,18 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   boost: 1dca942403ed9342f98334bf4c3621f011aa7946
   DoubleConversion: f16ae600a246532c4020132d54af21d0ddb2a385
-  EXConstants: 9b47f3f07f01c5afaa23b1fc9e49bb87f70e3576
+  EXConstants: 0472d3c23d97943fe3505306daf9cde8024365c2
   EXImageLoader: 759063a65ab016b836f73972d3bb25404888713d
-  Expo: 684b9146eabc19a5aa6994f8d6b9131f6facbb3b
-  ExpoAsset: 77e4579f19b48d6b3f4055c933e86ce45e80caeb
-  ExpoCamera: 821d04abb9a02f6537fa927398984e117e2cab7a
-  ExpoFileSystem: dfca98dde30460788cb9f6f51f177888fa021934
-  ExpoFont: 8b14db1afebf62e9774613a082e402985f4e747c
+  Expo: 8a2753e86ee7c1943ca0975b643d73ed03b113a1
+  ExpoAsset: a4cbc27a7cd24a6e87eb719603790b2cfa8dd326
+  ExpoCamera: 66fd71366b165e97a1676f6a5d906f4a35c89315
+  ExpoFileSystem: 4d2e7f77a41cfde8c3ae98580d872cd49437f993
+  ExpoFont: 773955186469acc5108ff569712a2d243857475f
   ExpoImage: 36f2f4a3a530c1d1a2d349a1f0a0b400b0e1af47
   ExpoImageManipulator: 43c7bb3ecccbe993054d2e9131c8dcbe54f1385b
-  ExpoKeepAwake: 1f74cdf53ab3b3aeb7110f18eb053c92e7c3e710
+  ExpoKeepAwake: 2a5f15dd4964cba8002c9a36676319a3394c85c7
   ExpoLinearGradient: ee9efc5acb988b911320e964fab9b4cbdeb198c4
-  ExpoLocation: d872aac36a8d5d23f1c7b90120c8fc5fec0aa9a8
+  ExpoLocation: 33f4e00cd3c2a4d3424175cb6e433bee108b76a2
   ExpoModulesCore: 561a787bc626ab9bcfee2a688bd588bf2667405f
   ExpoSMS: 2f90c7c780ef65c9f52b800183aab554360b34a2
   ExpoSplashScreen: 643666b96a84e8d97d55fac43926fb4183c692d9

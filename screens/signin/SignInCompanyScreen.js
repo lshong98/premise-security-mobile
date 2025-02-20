@@ -206,11 +206,14 @@ export default class SignInCompanyScreen extends React.Component {
 
     return (
       <SafeAreaView style={styles.container}>
+        <View style={styles.searchListContainer}>
+          {this.renderSearchList()}
+        </View>
         <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.container}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+            style={styles.buttonWrapper}
         >
-          {this.renderSearchList()}
           <View style={styles.buttonVerticalContainer}>
             <View style={styles.buttonHorizontalContainer}>
               <View style={styles.buttonContainer}>
@@ -238,6 +241,10 @@ const styles = StyleSheet.create({
   searchListContainer: {
     flex: 1,
     width: '100%',
+  },
+  buttonWrapper: {
+    width: '100%',
+    backgroundColor: 'transparent',
   },
   rowContainer: {
     height: 40,

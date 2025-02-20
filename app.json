@@ -20,7 +20,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.swinburne.tpsapp",
-      "buildNumber": "1.13.0",
+      "buildNumber": "1.14.0",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to scan barcodes and take pictures of users' face.",

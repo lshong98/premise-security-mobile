@@ -9,26 +9,89 @@ export default class HomeScreen extends React.Component{
     super(props);
     this.state = {
       consent: false,
+      isShowingError: false
     }
   }
 
   visitorSignInRequest = () => {
-    if(this.state.consent === true) {
+    if (!this.state.isShowingError) {
+      if (!global.premiseLocation) {
+        this.setState({ isShowingError: true }, () => {
+          Alert.alert(
+            'Error',
+            'Please select a premise location first.',
+            [{ 
+              text: 'OK',
+              onPress: () => {
+                this.setState({ isShowingError: false });
+                this.props.navigation.navigate('Location');
+              }
+            }],
+            { cancelable: false }
+          );
+        });
+        return;
+      }
+
+      if (!this.state.consent) {
+        this.setState({ isShowingError: true }, () => {
+          Alert.alert(
+            'Error',
+            'Please give us consent to use your information.',
+            [{ 
+              text: 'OK',
+              onPress: () => this.setState({ isShowingError: false })
+            }],
+            { cancelable: false }
+          );
+        });
+        return;
+      }
+
       this.props.navigation.navigate('SignInCompany', {
         isVisitor: true
-      })
-    }else{
-      Alert.alert('Please give us consent to use your information.')
+      });
     }
   }
 
   staffSignInRequest = () => {
-    if(this.state.consent === true) {
+    if (!this.state.isShowingError) {
+      if (!global.premiseLocation) {
+        this.setState({ isShowingError: true }, () => {
+          Alert.alert(
+            'Error',
+            'Please select a premise location first.',
+            [{ 
+              text: 'OK',
+              onPress: () => {
+                this.setState({ isShowingError: false });
+                this.props.navigation.navigate('Location');
+              }
+            }],
+            { cancelable: false }
+          );
+        });
+        return;
+      }
+
+      if (!this.state.consent) {
+        this.setState({ isShowingError: true }, () => {
+          Alert.alert(
+            'Error',
+            'Please give us consent to use your information.',
+            [{ 
+              text: 'OK',
+              onPress: () => this.setState({ isShowingError: false })
+            }],
+            { cancelable: false }
+          );
+        });
+        return;
+      }
+
       this.props.navigation.navigate('SignInCompany', {
         isVisitor: false
-      })
-    }else{
-      Alert.alert('Please give us consent to use your information.')
+      });
     }
   }
 

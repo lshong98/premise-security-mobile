@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Dimensions, ScrollView } from 'react-native';
+import { StyleSheet, View, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Text, Button, TextInput, Switch } from 'react-native-paper';
+import { Text, Button, TextInput, Switch, Alert } from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { Alert, Platform } from 'react-native';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 
@@ -20,66 +19,126 @@ export default function EntrySignInScreen({navigation, route}) {
   const [ consent, setConsent ] = useState(false);
   const [ staffProfiles, setStaffProfiles ] = useState([]);
   const [ staffNames, setStaffNames ] = useState([]);
+  const [ isLoading, setIsLoading ] = useState(true);
+  const [ error, setError ] = useState(null);
   const [countDropdownOpen, setCountDropdownOpen] = useState(false);
   const [purposeDropdownOpen, setPurposeDropdownOpen] = useState(false);
   const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const [areaDropdownOpen, setAreaDropdownOpen] = useState(false);
 
   const getStaffProfiles = async () => {
-    if(global.internetConnectivity){
-      firebase.firestore()
-      .collection('StaffProfiles')
-      .orderBy('sortField', 'asc')
-      .get()
-      .then(snapshot => {
-        let returnStaffData = [];
-        let returnStaffNames = [];
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      if (global.internetConnectivity) {
+        const snapshot = await firebase.firestore()
+          .collection('StaffProfiles')
+          .orderBy('sortField', 'asc')
+          .get();
+
+        const returnStaffData = [];
+        const returnStaffNames = [];
+
         snapshot.docs.forEach(doc => {
-          returnStaffData.push({...doc.data(), id: doc.id})
-          returnStaffNames.push({label: doc.data().name, value: doc.data().name})
-        })
-        AsyncStorage.setItem('staffProfiles', JSON.stringify(returnStaffData))
-        AsyncStorage.setItem('staffNames', JSON.stringify(returnStaffNames))
+          const data = doc.data();
+          returnStaffData.push({ ...data, id: doc.id });
+          returnStaffNames.push({ label: data.name, value: data.name });
+        });
+
+        await AsyncStorage.setItem('staffProfiles', JSON.stringify(returnStaffData));
+        await AsyncStorage.setItem('staffNames', JSON.stringify(returnStaffNames));
+
         setStaffProfiles(returnStaffData);
         setStaffNames(returnStaffNames);
-      })
-    }else{
-      let returnStaffProfiles = await AsyncStorage.getItem('staffProfiles');
-      let returnStaffNames = await AsyncStorage.getItem('staffNames');
-      setStaffProfiles(JSON.parse(returnStaffProfiles));
-      setStaffNames(JSON.parse(returnStaffNames));
+      } else {
+        const [returnStaffProfiles, returnStaffNames] = await Promise.all([
+          AsyncStorage.getItem('staffProfiles'),
+          AsyncStorage.getItem('staffNames')
+        ]);
+
+        if (!returnStaffProfiles || !returnStaffNames) {
+          throw new Error('No offline data available');
+        }
+
+        setStaffProfiles(JSON.parse(returnStaffProfiles));
+        setStaffNames(JSON.parse(returnStaffNames));
+      }
+    } catch (error) {
+      console.error('Error in getStaffProfiles:', error);
+      setError('Failed to load staff profiles. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    getStaffProfiles();
-  },[]);
+    let mounted = true;
 
-  const onToggleSwitch = () => setConsent(!consent);
+    const loadData = async () => {
+      try {
+        await getStaffProfiles();
+      } catch (error) {
+        console.error('Error in loadData:', error);
+        if (mounted) {
+          setError('Failed to load data');
+        }
+      }
+    };
 
-  const submitOnlineData = () => {
-    if(visitPurpose === ''){
-      Alert.alert('Please state your purpose of visit.')
-    }else if(visitPurpose === 'Visit/Meeting/Audit/Inspection' && personMeeting === ''){
-      Alert.alert('Please state who you are meeting.');
-    }else if(visitPurpose === 'Walk-in customer' && walkingArea === ''){
-      Alert.alert('Please state walk-in area.');
-    }else if(carPlateNo === '') {
-      Alert.alert('Please key in car plate no.')
-    }else if(consent !== true) {
-      Alert.alert('Please give us consent to use your information.')
-    }else {
-      if(visitPurpose !== 'Visit/Meeting/Audit/Inspection'){
-        setPersonMeeting('');
-        setPersonDepartment('');
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const onToggleSwitch = () => setConsent(prev => !prev);
+
+  const validateForm = () => {
+    const errors = [];
+
+    if (!visitPurpose) {
+      errors.push('Please state your purpose of visit.');
+    }
+    if (visitPurpose === 'Visit/Meeting/Audit/Inspection' && !personMeeting) {
+      errors.push('Please state who you are meeting.');
+    }
+    if (visitPurpose === 'Walk-in customer' && !walkingArea) {
+      errors.push('Please state walk-in area.');
+    }
+    if (!carPlateNo) {
+      errors.push('Please key in car plate no.');
+    }
+    if (!consent) {
+      errors.push('Please give us consent to use your information.');
+    }
+
+    if (errors.length > 0) {
+      throw new Error(errors.join('\n'));
+    }
+  };
+
+  const submitOnlineData = async () => {
+    try {
+      validateForm();
+
+      let finalVisitPurpose = visitPurpose;
+      let finalPersonMeeting = personMeeting;
+      let finalPersonDepartment = personDepartment;
+      let finalWalkingArea = walkingArea;
+
+      if (visitPurpose !== 'Visit/Meeting/Audit/Inspection') {
+        finalPersonMeeting = '';
+        finalPersonDepartment = '';
       }
 
-      if(visitPurpose === 'Others'){
-        setVisitPurpose(otherPurpose);
+      if (visitPurpose === 'Others') {
+        finalVisitPurpose = otherPurpose;
       }
 
-      if(visitPurpose !== 'Walk-in customer'){
-        setWalkingArea('');
+      if (visitPurpose !== 'Walk-in customer') {
+        finalWalkingArea = '';
       }
 
       navigation.navigate('PictureSignIn', {
@@ -87,78 +146,132 @@ export default function EntrySignInScreen({navigation, route}) {
         personName: route.params.personName,
         contactNo: route.params.contactNo,
         noOfPeople: peopleNo,
-        visitPurpose: visitPurpose,
-        personMeeting: personMeeting,
-        personDepartment: personDepartment,
-        walkinArea: walkingArea,
-        carPlateNo: carPlateNo,
+        visitPurpose: finalVisitPurpose,
+        personMeeting: finalPersonMeeting,
+        personDepartment: finalPersonDepartment,
+        walkinArea: finalWalkingArea,
+        carPlateNo,
         from: 'EntrySignIn',
         isVisitor: route.params.isVisitor
       });
+    } catch (error) {
+      Alert.alert(
+        'Form Validation',
+        error.message,
+        [{ text: 'OK' }],
+        { cancelable: false }
+      );
     }
-  }
+  };
 
   const submitOfflineData = async () => {
+    try {
+      validateForm();
 
-    if(visitPurpose === ''){
-      Alert.alert('Please state your purpose of visit.')
-    }else if(visitPurpose === 'Visit/Meeting/Audit/Inspection' && personMeeting === ''){
-      Alert.alert('Please state who you are meeting.');
-    }else if(visitPurpose === 'Walk-in customer' && walkingArea === ''){
-      Alert.alert('Please state walk-in area.');
-    }else if(consent !== true) {
-      Alert.alert('Please give us consent to use your information.')
-    }else {
-      if(visitPurpose !== 'Visit/Meeting/Audit/Inspection'){
-        setPersonMeeting('');
-        setPersonDepartment('');
+      let finalVisitPurpose = visitPurpose;
+      let finalPersonMeeting = personMeeting;
+      let finalPersonDepartment = personDepartment;
+      let finalWalkingArea = walkingArea;
+
+      if (visitPurpose !== 'Visit/Meeting/Audit/Inspection') {
+        finalPersonMeeting = '';
+        finalPersonDepartment = '';
       }
 
-      if(visitPurpose === 'Others'){
-        setVisitPurpose(otherPurpose);
+      if (visitPurpose === 'Others') {
+        finalVisitPurpose = otherPurpose;
       }
 
-      if(visitPurpose !== 'Walk-in customer'){
-        setWalkingArea('');
+      if (visitPurpose !== 'Walk-in customer') {
+        finalWalkingArea = '';
       }
 
-      firebase.firestore()
+      await firebase.firestore()
         .collection('Entries')
         .add({
           company: route.params.companyName,
           name: route.params.personName,
           contact_no: route.params.contactNo,
           no_of_people: peopleNo,
-          visit_purpose: visitPurpose,
-          host: personMeeting,
-          host_department: personDepartment,
-          walkin_area: walkingArea,
+          visit_purpose: finalVisitPurpose,
+          host: finalPersonMeeting,
+          host_department: finalPersonDepartment,
+          walkin_area: finalWalkingArea,
           premise: global.premiseLocation,
           sign_in_time: firebase.firestore.Timestamp.fromDate(new Date()),
           sign_in_photo: '',
           sign_out_time: '',
-          sign_out_photo: ''
-        }).then(() => {
-          let counterRef = firebase.firestore().collection('Counters').doc('Entries');
-          counterRef.update({ "counter": firebase.firestore.FieldValue.increment(1) });
-        }).catch(error => {
-          Alert.alert(error)
-        })
-      navigation.navigate('HomeSignOut')
+          sign_out_photo: '',
+          carPlateNo
+        });
+
+      await firebase.firestore()
+        .collection('Counters')
+        .doc('Entries')
+        .update({
+          counter: firebase.firestore.FieldValue.increment(1)
+        });
+
+      navigation.navigate('HomeSignOut');
+      Alert.alert(
+        'Success',
+        'Entry created successfully',
+        [{ text: 'OK' }],
+        { cancelable: false }
+      );
+    } catch (error) {
+      console.error('Error in submitOfflineData:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to submit data. Please try again.',
+        [{ text: 'OK' }],
+        { cancelable: false }
+      );
     }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text>Loading staff profiles...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          mode="contained" 
+          onPress={getStaffProfiles}
+          style={styles.retryButton}
+        >
+          Retry
+        </Button>
+      </View>
+    );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+    >
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>PLEASE ENTER DETAILS</Text>
       </View>
 
-      <View style={Platform.OS !== 'android' ? {...styles.dropdownContainer, zIndex: 5000} : {...styles.dropdownContainer}}>
-        <Text style={styles.inputLabel}>No. of People: </Text>
-        <DropDownPicker
+      <View style={styles.contentContainer}>
+        <View style={[
+          styles.dropdownContainer,
+          Platform.OS !== 'android' && { zIndex: 5000 }
+        ]}>
+          <Text style={styles.inputLabel}>No. of People: </Text>
+          <DropDownPicker
             open={countDropdownOpen}
-            setOpen={(open) => setCountDropdownOpen(open)}
+            setOpen={setCountDropdownOpen}
             value={peopleNo}
             setValue={setPeopleNo}
             items={[
@@ -168,14 +281,18 @@ export default function EntrySignInScreen({navigation, route}) {
               {label: '4', value: 4}
             ]}
             containerStyle={styles.dropdown}
-        />
-      </View>
+            listMode="SCROLLVIEW"
+          />
+        </View>
 
-      <View style={Platform.OS !== 'android' ? {...styles.dropdownContainer, zIndex: 4000} : {...styles.dropdownContainer}}>
-        <Text style={styles.inputLabel}>Purpose of visit: </Text>
-        <DropDownPicker
+        <View style={[
+          styles.dropdownContainer,
+          Platform.OS !== 'android' && { zIndex: 4000 }
+        ]}>
+          <Text style={styles.inputLabel}>Purpose of visit: </Text>
+          <DropDownPicker
             open={purposeDropdownOpen}
-            setOpen={(open) => setPurposeDropdownOpen(open)}
+            setOpen={setPurposeDropdownOpen}
             value={visitPurpose}
             setValue={setVisitPurpose}
             items={[
@@ -187,163 +304,174 @@ export default function EntrySignInScreen({navigation, route}) {
               {label: 'Transportation contractor', value: 'Transportation contractor'},
               {label: 'Others', value: 'Others'}
             ]}
-          containerStyle={styles.dropdown}
-        />
-      </View>
-      {visitPurpose === 'Visit/Meeting/Audit/Inspection' ?
-      <View style={Platform.OS !== 'android' ? {...styles.dropdownContainer, zIndex: 3000} : {...styles.dropdownContainer}}>
-        <Text style={styles.inputLabel}>Person I am meeting</Text>
-        <DropDownPicker
-            open={staffDropdownOpen}
-            setOpen={(open) => setStaffDropdownOpen(open)}
-            value={personMeeting}
-            setValue={setPersonMeeting}
-            items={staffNames}
             containerStyle={styles.dropdown}
-            onChangeValue={value => {
-              staffProfiles.forEach((staff) => {
-                if(staff.name === value){
-                  setPersonDepartment(staff.department);
-                }
-              })
-            }}
-        />
-      </View> : null}
-      {visitPurpose === 'Visit/Meeting/Audit/Inspection' ?
-      <View style={{
-        ...styles.inputContainer}}>
-        <Text style={styles.inputLabel}>Department of the person I am meeting</Text>
-        <TextInput
-          mode='outlined'
-          style={styles.inputTextField}
-          value={personDepartment}
-          onChangeText={text => setPersonDepartment(text)}
-          editable={false}
-        />
-      </View> : null}
-      {visitPurpose === 'Walk-in customer' ?
-      <View style={Platform.OS !== 'android' ? {...styles.dropdownContainer, zIndex: 3000} : {...styles.dropdownContainer}}>
-        <Text style={styles.inputLabel}>Walk in area</Text>
-        <DropDownPicker
-            open={areaDropdownOpen}
-            setOpen={(open) => setAreaDropdownOpen(open)}
-            value={walkingArea}
-            setValue={setWalkingArea}
-            items={[
-              {label: 'KIWMP', value: 'KIWMP'},
-              {label: 'Kidurong dumpsite', value: 'Kidurong dumpsite'},
-            ]}
-            containerStyle={styles.dropdown}
-        />
-      </View> : null}
-      {visitPurpose === 'Others' ?
-      <View style={{
-        ...styles.inputContainer}}>
-        <Text style={styles.inputLabel}>Please specify your purpose.</Text>
-        <TextInput
-          label={false}
-          mode='outlined'
-          style={styles.inputTextField}
-          value={otherPurpose}
-          onChangeText={text => setOtherPurpose(text)}
-        />
-      </View> : null}
-      <View style={{
-        ...styles.inputContainer}}>
-        <Text style={styles.inputLabel}>Car Plate No</Text>
-        <TextInput
+            listMode="SCROLLVIEW"
+          />
+        </View>
+        {visitPurpose === 'Visit/Meeting/Audit/Inspection' && (
+          <>
+            <View style={[
+              styles.dropdownContainer,
+              Platform.OS !== 'android' && { zIndex: 3000 }
+            ]}>
+              <Text style={styles.inputLabel}>Person I am meeting</Text>
+              <DropDownPicker
+                open={staffDropdownOpen}
+                setOpen={setStaffDropdownOpen}
+                value={personMeeting}
+                setValue={setPersonMeeting}
+                items={staffNames}
+                containerStyle={styles.dropdown}
+                listMode="SCROLLVIEW"
+                onChangeValue={value => {
+                  staffProfiles.forEach((staff) => {
+                    if(staff.name === value){
+                      setPersonDepartment(staff.department);
+                    }
+                  });
+                }}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Department of the person I am meeting</Text>
+              <TextInput
+                mode='outlined'
+                style={styles.inputTextField}
+                value={personDepartment}
+                editable={false}
+              />
+            </View>
+          </>
+        )}
+        {visitPurpose === 'Walk-in customer' && (
+          <View style={[
+            styles.dropdownContainer,
+            Platform.OS !== 'android' && { zIndex: 3000 }
+          ]}>
+            <Text style={styles.inputLabel}>Walk in area</Text>
+            <DropDownPicker
+              open={areaDropdownOpen}
+              setOpen={setAreaDropdownOpen}
+              value={walkingArea}
+              setValue={setWalkingArea}
+              items={[
+                {label: 'KIWMP', value: 'KIWMP'},
+                {label: 'Kidurong dumpsite', value: 'Kidurong dumpsite'},
+              ]}
+              containerStyle={styles.dropdown}
+              listMode="SCROLLVIEW"
+            />
+          </View>
+        )}
+        {visitPurpose === 'Others' && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Please specify your purpose.</Text>
+            <TextInput
+              mode='outlined'
+              style={styles.inputTextField}
+              value={otherPurpose}
+              onChangeText={text => setOtherPurpose(text)}
+            />
+          </View>
+        )}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Car Plate No</Text>
+          <TextInput
             mode='outlined'
             style={styles.inputTextField}
             value={carPlateNo}
             onChangeText={text => setCarPlateNo(text)}
             editable={true}
-        />
-      </View>
-      <View style={styles.consentContainer}>
-        <Switch
-          value={consent}
-          onValueChange={onToggleSwitch}
-        />
-        <Text style={styles.consentText}>I consent to my information being used for attendance monitoring</Text>
+          />
+        </View>
+
+        <View style={styles.consentContainer}>
+          <Switch
+            value={consent}
+            onValueChange={onToggleSwitch}
+          />
+          <Text style={styles.consentText}>I consent to my information being used for attendance monitoring</Text>
+        </View>
       </View>
 
       <View style={styles.buttonVerticalContainer}>
         <View style={styles.buttonHorizontalContainer}>
           <View style={styles.buttonContainer}>
-            <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
-              navigation.goBack()}>
+            <Button 
+              style={styles.buttonText} 
+              buttonColor={"#2F465B"} 
+              mode="contained" 
+              onPress={() => navigation.goBack()}
+            >
               BACK
             </Button>
           </View>
           <View style={styles.buttonContainer}>
-            <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={global.internetConnectivity ? () =>
-              submitOnlineData()
-            : () => submitOfflineData()} >
+            <Button 
+              style={styles.buttonText} 
+              buttonColor={"#2F465B"} 
+              mode="contained" 
+              onPress={global.internetConnectivity ? submitOnlineData : submitOfflineData}
+            >
               CONTINUE
             </Button>
           </View>
         </View>
       </View>
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1, 
-    flexDirection: 'column', 
-    justifyContent: 'space-between'
+    flex: 1,
+    backgroundColor: '#fff'
   },
-  headerContainer:{
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20
+  },
+  headerContainer: {
     justifyContent: 'center',
     backgroundColor: '#2F465B',
-    height: 60
+    height: 60,
+    width: '100%'
   },
-  headerTitle:{
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginHorizontal: 20, 
+  headerTitle: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center'
   },
-  dropdownContainer:{
-    marginTop: 30,
-    alignSelf: 'center',
-    width: width*0.8
+  dropdownContainer: {
+    marginBottom: 20
   },
-  dropdown:{
-    marginTop: 5, 
-    height: 40, 
-    width: width * 0.8,
-    flex: 1
+  dropdown: {
+    height: 40
   },
-
-  inputContainer:{
-    marginTop: 30,
-    alignSelf: 'center'
+  inputContainer: {
+    marginBottom: 20
   },
   inputLabel: {
-    fontSize: 14, 
-    fontFamily: 'roboto-regular', 
-    fontWeight: 'bold'
+    marginBottom: 5,
+    fontSize: 16,
+    color: '#333'
   },
-  inputTextField:{
-    width: width * 0.8, 
-    height: 40, 
-    backgroundColor: 'white'
+  inputTextField: {
+    backgroundColor: '#fff'
   },
-  consentContainer:{
-    width: width * 0.8,
-    marginTop: 30,
-    flexDirection: "row",
-    alignSelf: 'center'
+  consentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20
   },
-  consentText:{
-    fontSize: 12,
+  consentText: {
     flex: 1,
-    marginLeft: 5,
-    flexWrap: 'wrap'
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666'
   },
-  buttonVerticalContainer:{
+  buttonVerticalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
     marginTop: 50
@@ -354,12 +482,27 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: 'space-between',
   },
-  buttonContainer:{
+  buttonContainer: {
     marginVertical: 15,
     marginHorizontal: 15, 
     justifyContent: 'flex-end'
   },
   buttonText: {
     justifyContent: 'center'
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  errorText: {
+    color: '#ff3b30',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20
+  },
+  retryButton: {
+    backgroundColor: '#2F465B'
   }
 });

@@ -15,76 +15,119 @@ export default class LocationScreen extends Component {
     this.state = {
       open: false,
       selectedLocation: null,
-      locationList: []
+      locationList: [],
+      isLoading: true,
+      error: null
     }
+    this.netInfoUnsubscribe = null;
   }
 
-  async componentDidMount (){
+  async componentDidMount(){
     this._isMounted = true;
-    NetInfo.addEventListener( async state => {
-      try {
-        if(state.isConnected && state.isInternetReachable){
-          let allLocations = [];
-          let allLocationsForGlobal = []
-          firebase.firestore()
-          .collection('Premises')
-          .get()
-          .then(snapshot => {
-            if(this._isMounted){
-              snapshot.docs.forEach(doc => {
-                allLocations.push({label: doc.data().name, value: doc.data().name})
-                allLocationsForGlobal.push(doc.data().name)
-              })
-
-              //all premise name only array for homescreen use
-              AsyncStorage.setItem('allpremises', JSON.stringify(allLocationsForGlobal))
-              //dropdown offline data
-              AsyncStorage.setItem('premise', JSON.stringify(allLocations))
-              //dropdown data
-              this.setState({locationList: allLocations})
-            }
-          })
-          .catch(error => {
-            console.error('Firebase error:', error);
-            this.loadOfflineLocations();
-          });
-        } else {
-          this.loadOfflineLocations();
-        }
-      } catch (error) {
-        console.error('Error in componentDidMount:', error);
-        this.loadOfflineLocations();
-      }
-    })
+    this.netInfoUnsubscribe = NetInfo.addEventListener(this.handleConnectivityChange);
+    await this.fetchLocations();
   }
 
   componentWillUnmount() {
     this._isMounted = false;
+    if (this.netInfoUnsubscribe) {
+      this.netInfoUnsubscribe();
+    }
+  }
+
+  handleConnectivityChange = async (state) => {
+    if (!this._isMounted) return;
+    
+    try {
+      if (state.isConnected && state.isInternetReachable) {
+        await this.fetchLocations();
+      } else {
+        await this.loadOfflineLocations();
+      }
+    } catch (error) {
+      console.error('Connectivity change error:', error);
+      await this.loadOfflineLocations();
+    }
+  }
+
+  fetchLocations = async () => {
+    if (!this._isMounted) return;
+
+    try {
+      const snapshot = await firebase.firestore()
+        .collection('Premises')
+        .get();
+
+      if (!this._isMounted) return;
+
+      const allLocations = [];
+      const allLocationsForGlobal = [];
+
+      snapshot.docs.forEach(doc => {
+        const name = doc.data().name;
+        allLocations.push({label: name, value: name});
+        allLocationsForGlobal.push(name);
+      });
+
+      await AsyncStorage.setItem('allpremises', JSON.stringify(allLocationsForGlobal));
+      await AsyncStorage.setItem('premise', JSON.stringify(allLocations));
+      
+      if (this._isMounted) {
+        this.setState({
+          locationList: allLocations,
+          isLoading: false,
+          error: null
+        });
+      }
+    } catch (error) {
+      console.error('Firebase error:', error);
+      if (this._isMounted) {
+        this.setState({ error: error.message });
+        await this.loadOfflineLocations();
+      }
+    }
   }
 
   loadOfflineLocations = async () => {
+    if (!this._isMounted) return;
+
     try {
-      let asyncLocations = await AsyncStorage.getItem('premise');
-      this.setState({
-        locationList: asyncLocations ? JSON.parse(asyncLocations) : []
-      });
+      const asyncLocations = await AsyncStorage.getItem('premise');
+      if (this._isMounted) {
+        this.setState({
+          locationList: asyncLocations ? JSON.parse(asyncLocations) : [],
+          isLoading: false,
+          error: null
+        });
+      }
     } catch (error) {
       console.error('Error loading offline locations:', error);
-      this.setState({ locationList: [] });
+      if (this._isMounted) {
+        this.setState({
+          locationList: [],
+          isLoading: false,
+          error: 'Failed to load locations. Please try again.'
+        });
+      }
     }
   }
 
   submitLocation = () => {
-    const { selectedLocation } = this.state
-    if(selectedLocation != null){
-      this.props.navigation.navigate('Login', {selectedLocation: selectedLocation})
+    const { selectedLocation } = this.state;
+    if (selectedLocation) {
+      this.props.navigation.navigate('Login', { selectedLocation });
     } else {
-      Alert.alert('Please select a branch or check your internet connection')
+      Alert.alert(
+        'Location Required',
+        'Please select a branch or check your internet connection',
+        [{ text: 'OK' }],
+        { cancelable: false }
+      );
     }
   }
 
   render(){
-    const { open, selectedLocation, locationList } = this.state
+    const { open, selectedLocation, locationList, isLoading, error } = this.state
 
     return (
       <Block style={{flex: 1, width: '100%'}}>
@@ -112,7 +155,7 @@ export default class LocationScreen extends Component {
                 containerStyle={{height: 40}}
                 dropDownMaxHeight={120}
                 placeholder="Select Trienekens Premise"
-                loading={!locationList || locationList.length === 0}
+                loading={isLoading}
                 searchable={false}
             />
           </Block>
@@ -120,6 +163,9 @@ export default class LocationScreen extends Component {
             <Text style={{ fontFamily: 'roboto-bold', color: 'gray',  }} size={16} center>NEXT </Text>
           </Button>
         </Block>
+        {error && (
+          <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+        )}
       </Block>
     );
   }

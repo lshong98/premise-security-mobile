@@ -18,6 +18,7 @@ export default function PictureSignInScreen({navigation, route}) {
   const [uploading, setUploading] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const [isShowingError, setIsShowingError] = useState(false);
   const cameraRef = useRef(null);
 
   useEffect(() => {
@@ -114,13 +115,27 @@ export default function PictureSignInScreen({navigation, route}) {
     if(photo == null){
       Alert.alert('Please take a photo first')
     } else { 
+      if (uploading) return; // Prevent multiple uploads
       setUploading(true);
       try {
         let uploadUrl = await uploadImageAsync(resizedPhoto);
         await submitData(uploadUrl);
       } catch (e) {
         console.log(e);
-        alert('Upload failed, please check your internet connection or try again');
+        if (!isShowingError) {
+          setIsShowingError(true);
+          Alert.alert(
+            'Upload Failed',
+            'Please check your internet connection or try again',
+            [
+              {
+                text: 'OK',
+                onPress: () => setIsShowingError(false)
+              }
+            ],
+            { cancelable: false }
+          );
+        }
       } finally {
         setUploading(false);
       }
@@ -132,20 +147,71 @@ export default function PictureSignInScreen({navigation, route}) {
   };
 
   const resizePhoto = async (photo) => {
-    const manipResult = await ImageManipulator.manipulateAsync(
-      photo,
-      [{flip: ImageManipulator.FlipType.Horizontal}, {resize: {width: 250, height: 250} }],
-      { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
-    );
-    setResizedPhoto(manipResult.uri);
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        photo,
+        [
+          {flip: ImageManipulator.FlipType.Horizontal}, 
+          {resize: {width: 250, height: 250}}
+        ],
+        { 
+          compress: 0.8,
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: true 
+        }
+      );
+      setResizedPhoto(manipResult.uri);
+      return true;
+    } catch (error) {
+      console.error('Error resizing photo:', error);
+      if (!isShowingError) {
+        setIsShowingError(true);
+        Alert.alert(
+          'Error',
+          'Failed to process the photo. Please try again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => setIsShowingError(false)
+            }
+          ],
+          { cancelable: false }
+        );
+      }
+      return false;
+    }
   };
 
   const cameraTakePicture = async () => {
     if(cameraRef.current){
-      const photoData  = await cameraRef.current.takePictureAsync({skipProcessing: true});
-      setPhoto(photoData .uri);
-      await resizePhoto(photoData.uri);
-      setPhoto(photoData.uri);
+      try {
+        const photoData = await cameraRef.current.takePictureAsync({
+          quality: 0.8,
+          skipProcessing: true,
+          exif: false
+        });
+        setPhoto(photoData.uri);
+        const resizeSuccess = await resizePhoto(photoData.uri);
+        if (!resizeSuccess) {
+          setPhoto(null);
+        }
+      } catch (error) {
+        console.error('Error taking picture:', error);
+        if (!isShowingError) {
+          setIsShowingError(true);
+          Alert.alert(
+            'Error',
+            'Failed to take photo. Please try again.',
+            [
+              {
+                text: 'OK',
+                onPress: () => setIsShowingError(false)
+              }
+            ],
+            { cancelable: false }
+          );
+        }
+      }
     }
   }
 
@@ -168,26 +234,6 @@ export default function PictureSignInScreen({navigation, route}) {
   }
 
 
-  //
-  // renderCamera(){
-  //   return(
-  //     <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}>
-  //       <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
-  //           <Ionicons name="camera" size={50} color="white" />
-  //       </TouchableOpacity>
-  //     </Camera>
-  //   );
-  // }
-  // renderImage(){
-  //   return(
-  //     <ImageBackground resizeMode='cover' style={{flex: 1, transform: [{scaleX: -1}]}} source={{uri: this.state.photo}}>
-  //       <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={() => this.setState({ photo: null })}>
-  //           <Ionicons name="ios-close" size={50} color="white" />
-  //       </TouchableOpacity>
-  //     </ImageBackground>
-  //   )
-  // }
-
     return(
       <View style={styles.container}>
         <View style={styles.headerContainer}>
@@ -199,7 +245,7 @@ export default function PictureSignInScreen({navigation, route}) {
               (
                   <CameraView style={{flex: 1}} facing={cameraFacing} ref={cameraRef}>
                     <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={cameraFlip}>
-                      <Ionicons name="camera" size={50} color="white" />
+                      <Ionicons name="camera-reverse-outline" size={50} color="white" />
                     </TouchableOpacity>
                   </CameraView>
               )
@@ -304,29 +350,41 @@ function uuidv4() {
   });
 }
 
-
 async function uploadImageAsync(uri) {
-  const blob = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = function() {
-      resolve(xhr.response);
-    };
-    xhr.onerror = function(e) {
-      console.log(e);
-      reject(new TypeError('Network request failed'));
-    };
-    xhr.responseType = 'blob';
-    xhr.open('GET', uri, true);
-    xhr.send(null);
-  });
+  try {
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(xhr.response);
+        } else {
+          reject(new Error('Failed to load image'));
+        }
+      };
+      xhr.onerror = function(e) {
+        console.error('XHR Error:', e);
+        reject(new TypeError('Network request failed'));
+      };
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
 
-  const ref = firebase
-    .storage()
-    .ref()
-    .child('entries/' + uuidv4() + '.jpg');
-  const snapshot = await ref.put(blob, {cacheControl: 'private, max-age=7200', contentType: 'image/jpg'});
-  
-  blob.close();
-
-  return await snapshot.ref.getDownloadURL();
+    const ref = firebase
+      .storage()
+      .ref()
+      .child('entries/' + uuidv4() + '.jpg');
+    
+    const metadata = {
+      contentType: 'image/jpeg',
+      cacheControl: 'private, max-age=7200'
+    };
+    
+    const snapshot = await ref.put(blob, metadata);
+    blob.close();
+    return await snapshot.ref.getDownloadURL();
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw new Error('Failed to upload image: ' + error.message);
+  }
 }
