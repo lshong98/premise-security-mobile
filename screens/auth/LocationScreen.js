@@ -22,37 +22,56 @@ export default class LocationScreen extends Component {
   async componentDidMount (){
     this._isMounted = true;
     NetInfo.addEventListener( async state => {
-      if(state.isConnected && state.isInternetReachable){
-        let allLocations = [];
-        let allLocationsForGlobal = []
-        firebase.firestore()
-        .collection('Premises')
-        .get()
-        .then(snapshot => {
-          if(this._isMounted){
-            snapshot.docs.forEach(doc => {
-              allLocations.push({label: doc.data().name, value: doc.data().name})
-              allLocationsForGlobal.push(doc.data().name)
-            })
+      try {
+        if(state.isConnected && state.isInternetReachable){
+          let allLocations = [];
+          let allLocationsForGlobal = []
+          firebase.firestore()
+          .collection('Premises')
+          .get()
+          .then(snapshot => {
+            if(this._isMounted){
+              snapshot.docs.forEach(doc => {
+                allLocations.push({label: doc.data().name, value: doc.data().name})
+                allLocationsForGlobal.push(doc.data().name)
+              })
 
-            //all premise name only array for homescreen use
-            AsyncStorage.setItem('allpremises', JSON.stringify(allLocationsForGlobal))
-            //dropdown offline data
-            AsyncStorage.setItem('premise', JSON.stringify(allLocations))
-            //dropdown data
-            this.setState({locationList: allLocations})
-          }
-        })
-      } else {
-        let asyncLocations = await AsyncStorage.getItem('premise');
-        this.setState({locationList: JSON.parse(asyncLocations)});
+              //all premise name only array for homescreen use
+              AsyncStorage.setItem('allpremises', JSON.stringify(allLocationsForGlobal))
+              //dropdown offline data
+              AsyncStorage.setItem('premise', JSON.stringify(allLocations))
+              //dropdown data
+              this.setState({locationList: allLocations})
+            }
+          })
+          .catch(error => {
+            console.error('Firebase error:', error);
+            this.loadOfflineLocations();
+          });
+        } else {
+          this.loadOfflineLocations();
+        }
+      } catch (error) {
+        console.error('Error in componentDidMount:', error);
+        this.loadOfflineLocations();
       }
     })
-
   }
 
   componentWillUnmount() {
     this._isMounted = false;
+  }
+
+  loadOfflineLocations = async () => {
+    try {
+      let asyncLocations = await AsyncStorage.getItem('premise');
+      this.setState({
+        locationList: asyncLocations ? JSON.parse(asyncLocations) : []
+      });
+    } catch (error) {
+      console.error('Error loading offline locations:', error);
+      this.setState({ locationList: [] });
+    }
   }
 
   submitLocation = () => {
@@ -68,7 +87,7 @@ export default class LocationScreen extends Component {
     const { open, selectedLocation, locationList } = this.state
 
     return (
-      <Block style={{flex:1}}>
+      <Block style={{flex: 1, width: '100%'}}>
           <ImageBackground source={require('../../assets/images/location_bg.png')} resizeMode="cover" style={styles.background}>
             <Block style={styles.backgroundDim} >
               <Image style = {styles.logo} source={require('../../assets/images/logo.png')}/>
@@ -77,25 +96,24 @@ export default class LocationScreen extends Component {
               <Text style={styles.description} size={18}>"Your Trusted Partner in Environmental Management"</Text>
             </Block>
           </ImageBackground>
-        <Block center style={{ flex: 1, flexDirection: 'row', justifyContent:'flex-end' }}>
-          <Block style={{flex: 1, marginHorizontal: 40}}>
+        <Block center style={{ flex: 1, width: '100%', flexDirection: 'row', justifyContent:'flex-end' }}>
+          <Block style={{flex: 1, width: '100%', marginHorizontal: 40}}>
             <DropDownPicker
                 open={open}
                 value={selectedLocation}
-                items={
-                  locationList.length > 0
-                      ? locationList
-                      : [{ label: 'Select Trienekens Premise', value: 'Select Trienekens Premise' }]
-                }
+                items={locationList || []}
                 setOpen={(open) => this.setState({ open })}
                 setValue={(callback) => {
-                  const value = callback(selectedLocation); // `callback` applies changes to the value
-                  console.log('Selected location:', value); // Debugging
+                  const value = callback(selectedLocation);
+                  console.log('Selected location:', value);
                   this.setState({ selectedLocation: value });
                 }}
                 setItems={(items) => this.setState({ locationList: items })}
                 containerStyle={{height: 40}}
                 dropDownMaxHeight={120}
+                placeholder="Select Trienekens Premise"
+                loading={!locationList || locationList.length === 0}
+                searchable={false}
             />
           </Block>
           <Button style={styles.submitButton} onPress={() => this.submitLocation()}>

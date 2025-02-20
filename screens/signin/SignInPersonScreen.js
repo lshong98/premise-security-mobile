@@ -164,6 +164,7 @@ export default class SignInPersonScreen extends React.Component {
         sign_in_photo: '',
         sign_out_time: '',
         sign_out_photo: '',
+        carPlateNo: '',
         isVisitor: this.props.route.params.isVisitor
       }).then(() => {
         let counterRef = firebase.firestore().collection('Counters').doc('Entries');
@@ -213,74 +214,39 @@ export default class SignInPersonScreen extends React.Component {
     )
   }
 
-  renderSearchList = () => {
-    let dataSource = [];
-    if(this.props.route.params.isVisitor){
-      dataSource = this.state.filteredVisitorList;
-    }else{
-      dataSource = this.state.filteredStaffList;
-    }
+  render () {
+    const { isVisitor } = this.props.route.params;
+    const dataSource = isVisitor ? this.state.filteredVisitorList : this.state.filteredStaffList;
 
-    return(
-      <SearchList
-        data={dataSource}
-        renderRow={this.renderRow.bind(this)}
-        renderEmptyResult={this.renderEmptyResult.bind(this)}
-        renderBackButton={() => null}
-        renderEmpty={this.renderEmpty.bind(this)}
-        rowHeight={40}
-        toolbarBackgroundColor={'#2F465B'}
-        title={'PLEASE CHOOSE YOUR NAME'}
-        cancelTitle={'Clear'}
-        onClickBack={() => {}}
-        searchListBackgroundColor={'#fff'}
-        searchBarToggleDuration={300}
-        searchInputBackgroundColor={'#f2f2f2'}
-        searchInputBackgroundColorActive={'#f2f2f2'}
-        searchInputPlaceholderColor={'#000'}
-        searchInputTextColor={'#000'}
-        searchInputTextColorActive={'#000'}
-        searchInputPlaceholder='Search Person'
-        sectionIndexTextColor={'#000'}
-        searchBarBackgroundColor={'#fff'}
-      />
-    )
-  }
-
-  render(){
     return (
-        <SafeAreaView style={styles.container}>
-          <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              style={styles.container}
-          >
-            {this.renderSearchList()}
-            <View style={styles.buttonVerticalContainer}>
-              <View style={styles.buttonHorizontalContainer}>
-                <View style={styles.buttonContainerLeft}>
-                  <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
-                    this.props.navigation.navigate('SignInCompany',{
-                      isVisitor: this.props.route.params.isVisitor
-                    })}>
-                    BACK
-                  </Button>
-                </View>
-                <View style={styles.buttonContainerRight}>
-                  {global.internetConnectivity ?
-                  <Button style={styles.buttonText} buttonColor={"#2F465B"} mode="contained" onPress={() =>
-                    this.props.navigation.navigate('OtherPerson',{
-                      companyName: this.props.route.params.companyName,
-                      isVisitor: this.props.route.params.isVisitor
-                    })
-                  }>
-                    NEW PERSON
-                  </Button>
-                  : null}
-                </View>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.container}
+        >
+          <View style={styles.searchListContainer}>
+            <SearchList
+              data={dataSource}
+              renderRow={(item, sectionId, rowId) => this.renderRow(item, sectionId, rowId)}
+              cellHeight={50}
+              sectionHeaderHeight={30}
+              renderEmpty={this.renderEmpty}
+              toolbarBackgroundColor={'#2F465B'}
+              title={isVisitor ? 'SELECT YOUR NAME' : 'SELECT YOUR NAME'}
+              cancelTitle={'Clear'}
+              searchBarBackgroundColor={'#fff'}
+              searchInputBackgroundColor={'#f2f2f2'}
+              searchInputBackgroundColorActive={'#f2f2f2'}
+              searchInputPlaceholderColor={'#666'}
+              searchInputTextColor={'#000'}
+              searchInputTextColorActive={'#000'}
+              searchInputPlaceholder={'Search Name'}
+              sectionIndexTextColor={'#000'}
+              hideSectionList={false}
+            />
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     )
   }
 }
@@ -288,47 +254,35 @@ export default class SignInPersonScreen extends React.Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff'
   },
-
+  searchListContainer: {
+    flex: 1
+  },
   emptyDataSource: {
     flex: 1,
     alignItems: 'center',
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    marginTop: 50
+    justifyContent: 'center',
+    paddingHorizontal: 20
   },
-  emptySearchResult: {
-    flex: 1,
-    alignItems: 'center',
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    marginTop: 50
+  rowContainer: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee'
   },
-  buttonVerticalContainer:{
-    flex: 1,
-    justifyContent: 'flex-end',
+  rowText: {
+    fontSize: 16,
+    color: '#333'
   },
-  buttonHorizontalContainer: {
-    flex: 1, 
-    flexDirection: 'row',
-    flexWrap: "wrap",
-    justifyContent: 'space-between',
+  sectionHeader: {
+    padding: 10,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee'
   },
-  buttonContainerRight: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    // Adjust these values as needed
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Add extra padding for iOS devices
-  },
-  buttonContainerLeft: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    // Adjust these values as needed
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Add extra padding for iOS devices
-  },
-  buttonText: {
-    justifyContent: 'center'
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666'
   }
-});
+})

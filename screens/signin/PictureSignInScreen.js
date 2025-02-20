@@ -55,7 +55,7 @@ export default function PictureSignInScreen({navigation, route}) {
     let personMeeting = route.params.personMeeting
     let personDepartment = route.params.personDepartment
     let walkinArea = route.params.walkinArea
-    let carPlateNo = route.params.carPlateNo
+    let carPlateNo = route.params.carPlateNo ? route.params.carPlateNo : '';
 
     if(!signedIn){
       if(!isVisitor){

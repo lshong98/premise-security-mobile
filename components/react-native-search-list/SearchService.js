@@ -10,28 +10,67 @@ import pinyin from 'js-pinyin'
 import md5 from 'md5'
 
 export default class SearchService {
-  static search(source, searchStr) {
-    let tempResult = []
-    source.forEach((item, idx, array) => {
-      if (item) {
-        // 全局匹配字符
-        if (item.searchStr) {
-          let searchHandler = item.searchHandler
-          let result = SearchService.generateMacherInto(
-            item.searchStr,
-            item,
-            searchStr,
-            searchHandler ? searchHandler.translatedStr : '',
-            searchHandler ? searchHandler.charIndexerArr : [])
-          if (result.matcher) {
-            tempResult.push(result)
-          }
+  static search(searchStr, source) {
+    console.log('SearchService.search - Input:', { searchStr, sourceLength: source ? source.length : 0 });
+    if (!searchStr || !source || source.length === 0) {
+      console.log('SearchService.search - No input or source data');
+      return [];
+    }
+
+    const searchStrLower = searchStr.toLowerCase();
+    let tempResult = [];
+    
+    source.forEach((item) => {
+      if (item && item.searchStr) {
+        if (item.searchStr.toLowerCase().includes(searchStrLower)) {
+          const matcher = {
+            matches: [{
+              start: item.searchStr.toLowerCase().indexOf(searchStrLower),
+              end: item.searchStr.toLowerCase().indexOf(searchStrLower) + searchStrLower.length
+            }]
+          };
+          tempResult.push({ ...item, matcher });
         }
       }
-    })
-    return tempResult
+    });
+
+    console.log('SearchService.search - Results:', tempResult);
+    return tempResult;
   }
-  // FIXME 这个函数需要改造为一个字符串匹配多项
+
+  initializeData(data) {
+    console.log('SearchService.initializeData - Input data length:', data ? data.length : 0);
+    if (!data || data.length === 0) {
+      console.log('SearchService.initializeData - No data to process');
+      return [];
+    }
+
+    // Create a map to group items by their first letter
+    const sectionMap = new Map();
+    
+    data.forEach(item => {
+      if (item && item.searchStr) {
+        const firstChar = item.searchStr.charAt(0).toUpperCase();
+        if (!sectionMap.has(firstChar)) {
+          sectionMap.set(firstChar, []);
+        }
+        sectionMap.get(firstChar).push(item);
+      }
+    });
+
+    // Convert map to array of sections
+    const sections = Array.from(sectionMap, ([title, sectionData]) => ({
+      title,
+      data: sectionData.sort((a, b) => a.searchStr.localeCompare(b.searchStr))
+    }));
+
+    // Sort sections alphabetically
+    sections.sort((a, b) => a.title.localeCompare(b.title));
+
+    console.log('SearchService.initializeData - Created sections:', sections);
+    return sections;
+  }
+
   static generateMacherInto (source, item, inputLower, transStr, charIndexer) {
     let result = {}
     Object.assign(result, item)

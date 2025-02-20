@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { StyleSheet, View, Dimensions, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
-import SearchList, { HighlightableText } from '../../components/react-native-search-list';
+import { StyleSheet, View, Dimensions, SafeAreaView, KeyboardAvoidingView, Platform, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import SearchList from '../../components/react-native-search-list';
 import Touchable from '../../components/react-native-search-list/utils/Touchable';
-import { Text, Button } from 'react-native-paper';
+import { Button } from 'react-native-paper';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 
@@ -10,128 +10,200 @@ const { width, height } = Dimensions.get('window');
 
 export default class SignInCompanyScreen extends React.Component {
   _isMounted = false;
-  constructor (props) {
-    super(props)
+  constructor(props) {
+    super(props);
     this.state = {
       dataSource: [],
-    }
+      isLoading: true,
+      error: null
+    };
+    this.unsubscribeCompany = null;
   }
 
   async componentDidMount(){
-    let unsubscribeCompany = null;
     this._isMounted = true;
-    const isVisitor = this.props.route.params.isVisitor;
+    try {
+      const { isVisitor } = this.props.route.params;
 
-    if(isVisitor){
-      unsubscribeCompany = firebase.firestore()
-      .collection('CompanyProfiles')
-      .onSnapshot(snapshot => {
-        let searchList = [];
-
-        if(this._isMounted){
-          snapshot.docs.forEach(doc => {
-            searchList.push({ 'searchStr' : doc.data().name})
-          })
-
-          this.setState({dataSource: searchList})
-        }
-      })
-    }else if(isVisitor == false){
-      unsubscribeCompany = firebase.firestore()
-      .collection('Premises')
-      .onSnapshot(snapshot => {
-        let searchList = [];
-        let premiseList = [];
-        if(this._isMounted){
-          snapshot.docs.forEach(doc => {
-            let premiseName = doc.data().name
-            if(premiseName.includes("(")){
-              premiseName = premiseName.substring(0, premiseName.indexOf('('))
+      if(isVisitor){
+        this.setState({ isLoading: true, error: null });
+        this.unsubscribeCompany = firebase.firestore()
+          .collection('CompanyProfiles')
+          .onSnapshot(
+            snapshot => {
+              if (!this._isMounted) return;
+              
+              try {
+                let companies = [];
+                snapshot.docs.forEach(doc => {
+                  const data = doc.data();
+                  if (data && data.name) {
+                    companies.push({
+                      searchStr: data.name,
+                      data: {
+                        ...data,
+                        id: doc.id
+                      }
+                    });
+                  }
+                });
+                
+                // Sort companies alphabetically
+                companies.sort((a, b) => a.searchStr.localeCompare(b.searchStr));
+                
+                this.setState({
+                  dataSource: companies,
+                  isLoading: false,
+                  error: null
+                });
+              } catch (error) {
+                console.error("Error processing companies:", error);
+                this.setState({
+                  isLoading: false,
+                  error: error.message
+                });
+              }
+            },
+            error => {
+              console.error("Error fetching companies:", error);
+              if (this._isMounted) {
+                this.setState({
+                  isLoading: false,
+                  error: error.message
+                });
+              }
             }
+          );
+      }else if(isVisitor == false){
+        this.unsubscribeCompany = firebase.firestore()
+        .collection('Premises')
+        .onSnapshot(snapshot => {
+          let searchList = [];
+          let premiseList = [];
+          if(this._isMounted){
+            snapshot.docs.forEach(doc => {
+              let premiseName = doc.data().name
+              if(premiseName.includes("(")){
+                premiseName = premiseName.substring(0, premiseName.indexOf('('))
+              }
 
-            if(!premiseList.includes(premiseName.trim())){
-              searchList.push({ 'searchStr' : premiseName.trim()})
-              premiseList.push(premiseName.trim())
-            }
-          })
-          this.setState({dataSource: searchList})
-        }
-      })
+              if(!premiseList.includes(premiseName.trim())){
+                searchList.push({ 'searchStr' : premiseName.trim()})
+                premiseList.push(premiseName.trim())
+              }
+            })
+            this.setState({dataSource: searchList, isLoading: false})
+          }
+        }, error => {
+          console.error("Error fetching premises:", error);
+          this.setState({ isLoading: false, error: error.message });
+        })
+      }
+      if(this.unsubscribeCompany != null)
+        global.subscribers.push(this.unsubscribeCompany)
+    } catch (error) {
+      console.error("Error in componentDidMount:", error);
+      this.setState({
+        isLoading: false,
+        error: error.message
+      });
     }
-    if(unsubscribeCompany != null)
-      global.subscribers.push(unsubscribeCompany)
   }
 
   componentWillUnmount() {
     this._isMounted = false;
+    if (this.unsubscribeCompany) {
+      this.unsubscribeCompany();
+    }
   }
   
-  renderRow (item, sectionID, rowID, highlightRowFunc, isSearching) {
-    return (
-      <Touchable onPress={() => {
-        this.props.navigation.navigate('SignInPerson', {
-          companyName: item.searchStr,
-          isVisitor: this.props.route.params.isVisitor
-        })
-      }}>
-        <View key={rowID} style={{flex: 1, marginLeft: 20, height: 40, justifyContent: 'center'}}>
-          <HighlightableText
-            matcher={item.matcher}
-            text={item.searchStr}
-            textColor={'#000'}
-            hightlightTextColor={'#0069c0'}
-          />
-        </View>
-      </Touchable>
-    )
-  }
-
-  renderEmpty () {
-    return (
-      <View style={styles.emptyDataSource}>
-        <Text style={{color: '#979797', fontSize: 18, paddingTop: 20}}>{this.props.route.params.isVisitor ? "Loading Companies List" : "Loading Branch List"}</Text>
-      </View>
-    )
-  }
-
-  renderEmptyResult (searchStr) {
-    return (
-      <View style={styles.emptySearchResult}>
-        <Text style={{color: '#979797', fontSize: 18, paddingTop: 20}}> No Result For <Text
-          style={{color: '#171a23', fontSize: 18}}>{searchStr}</Text></Text>
-        <Text style={{color: '#979797', fontSize: 18, alignItems: 'center', paddingTop: 10}}>Please search again</Text>
-      </View>
-    )
-  }
-
   renderSearchList = () => {
-    return(
+    const { dataSource, isLoading, error } = this.state;
+
+    if (isLoading) {
+      return (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color="#2F465B" />
+          <Text style={styles.emptyText}>Loading companies...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.emptyText, styles.errorText]}>
+            {error}
+          </Text>
+        </View>
+      );
+    }
+
+    return (
       <SearchList
-        data={this.state.dataSource}
-        renderRow={this.renderRow.bind(this)}
-        renderEmptyResult={this.renderEmptyResult.bind(this)}
-        renderBackButton={() => null}
-        renderEmpty={this.renderEmpty.bind(this)}
-        rowHeight={40}
-        toolbarBackgroundColor={'#2F465B'}
-        title={this.props.route.params.isVisitor ? 'PLEASE SELECT YOUR COMPANY' : 'PLEASE SELECT YOUR BRANCH'}
-        cancelTitle={'Clear'}
-        onClickBack={() => {}}
-        searchListBackgroundColor={'#fff'}
-        searchBarToggleDuration={300}
-        searchInputBackgroundColor={'#f2f2f2'}
-        searchInputBackgroundColorActive={'#f2f2f2'}
-        searchInputPlaceholderColor={'#000'}
-        searchInputTextColor={'#000'}
-        searchInputTextColorActive={'#000'}
-        searchInputPlaceholder={this.props.route.params.isVisitor ? 'Search Company' : 'Search Branch'}
-        sectionIndexTextColor={'#000'}
-        searchBarBackgroundColor={'#fff'}
+        data={dataSource}
+        renderRow={this.renderRow}
+        cellHeight={50}
+        sectionHeaderHeight={30}
+        renderEmpty={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No companies found</Text>
+          </View>
+        )}
+        renderEmptyResult={(searchStr) => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No results found for "{searchStr}"
+            </Text>
+          </View>
+        )}
       />
-    )
+    );
   }
 
-  render(){
+  renderRow = (item, sectionId, index) => {
+    if (!item || !item.searchStr) {
+      console.warn('Invalid item in renderRow:', item);
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        style={styles.rowContainer}
+        onPress={() => this.onSelectCompany(item)}
+      >
+        <Text style={styles.rowText}>{item.searchStr}</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  onSelectCompany = (item) => {
+    if (!item || !item.searchStr) {
+      console.warn('Invalid company selected:', item);
+      return;
+    }
+
+    const { navigation, route } = this.props;
+    const { isVisitor } = route.params;
+
+    navigation.navigate('SignInPerson', {
+      companyName: item.searchStr,
+      companyData: item.data,
+      isVisitor: isVisitor
+    });
+  }
+
+  render() {
+    const { error } = this.state;
+
+    if (error) {
+      return (
+        <View style={styles.container}>
+          {this.renderEmpty()}
+        </View>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
@@ -153,47 +225,73 @@ export default class SignInCompanyScreen extends React.Component {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    )
+    );
   }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    backgroundColor: '#fff',
   },
-  
-  emptyDataSource: {
+  searchListContainer: {
     flex: 1,
-    alignItems: 'center',
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    marginTop: 50
+    width: '100%',
   },
-  emptySearchResult: {
+  rowContainer: {
+    height: 40,
+    paddingHorizontal: 15,
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    width: '100%',
+  },
+  rowText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  sectionHeader: {
+    height: 40,
+    paddingHorizontal: 15,
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    width: '100%',
+  },
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  emptyContainer: {
     flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    marginTop: 50
+    padding: 20
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 10
+  },
+  errorText: {
+    color: '#ff3b30'
   },
   buttonVerticalContainer:{
-    flex: 1,
     justifyContent: 'flex-end',
+    width: '100%',
   },
   buttonHorizontalContainer: {
-    flex: 1, 
     flexDirection: 'row-reverse',
-    flexWrap: "wrap",
+    width: '100%',
   },
   buttonContainer: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    // Adjust these values as needed
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Add extra padding for iOS devices
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
   },
   buttonText: {
     justifyContent: 'center'
   }
-
-});
+})

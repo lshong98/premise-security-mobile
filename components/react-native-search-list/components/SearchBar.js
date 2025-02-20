@@ -58,7 +58,7 @@ export default class SearchBar extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      value: props.value,
+      value: props.value || '',
       isShowHolder: true,
       animatedValue: new Animated.Value(0)
     }
@@ -66,7 +66,7 @@ export default class SearchBar extends Component {
 
   onChange (str) {
     this.props.onChange && this.props.onChange(str)
-    this.setState({str})
+    this.setState({ value: str })
   }
 
   onBlur () {
@@ -91,7 +91,8 @@ export default class SearchBar extends Component {
 
     Animated.timing(this.state.animatedValue, {
       duration: Theme.duration.toggleSearchBar,
-      toValue: toVal
+      toValue: toVal,
+      useNativeDriver: true
     }).start(() => {
       this.setState({isShowHolder: !isSearching})
     })
@@ -100,148 +101,90 @@ export default class SearchBar extends Component {
   cancelSearch () {
     this.refs.input.clear()
     this.refs.input.blur()
+    this.onChange('')
     this.searchingAnimation(false)
     this.props.onClickCancel && this.props.onClickCancel()
   }
 
   render () {
     return (
-      <View
-        style={[
-          this.props.style,
-          {
-            flexDirection: 'row',
-            padding: searchBarHorizontalPadding,
-            height: Theme.size.searchInputHeight,
-            backgroundColor: this.props.searchBarBackgroundColor
-          },
-          {
-            width: Theme.size.windowWidth + buttonWidth
-            // width: (Theme.size.windowWidth * 0.8) + buttonWidth,
-          }
-        ]}>
-        <Animated.View style={{
-          width: this.state.animatedValue.interpolate({
-            inputRange: [0, buttonWidth],
-            // TODO 这里要想办法做得更灵活一点
-            outputRange: [Theme.size.windowWidth - searchBarHorizontalPadding * 2, Theme.size.windowWidth - buttonWidth - searchBarHorizontalPadding]
-          }),
-          backgroundColor: this.state.animatedValue.interpolate({
-            inputRange: [0, buttonWidth],
-            outputRange: [this.props.searchInputBackgroundColor, this.props.searchInputBackgroundColorActive]
-          }),
-          height: 28,
-          borderRadius: 5
-        }}>
-          <TextInput
-            onFocus={this.onFocus.bind(this)}
-            onBlur={this.onBlur.bind(this)}
-            ref='input'
-            style={[styles.searchTextInputStyle, {
-              color: this.props.searchInputTextColorActive && !this.state.isShowHolder
-                ? this.props.searchInputTextColorActive
-                : this.props.searchInputTextColor || '#979797'
-            }, this.props.searchTextInputStyle]}
-            onChangeText={this.onChange.bind(this)}
-            value={this.state.value}
-            underlineColorAndroid='transparent'
-            returnKeyType='search' />
-
-          <Animated.View
-            pointerEvents='none'
-            style={[
-              styles.leftSearchIconStyle,
-              {
-                opacity: this.state.animatedValue.interpolate({
-                  inputRange: [0, buttonWidth],
-                  outputRange: [0, 1]
-                })
-              }
-            ]}>
-            <Image
-              style={styles.searchIconStyle}
-              source={require('../images/icon-search.png')} />
-          </Animated.View>
-
-          <Animated.View
-            pointerEvents='none'
-            style={[styles.centerSearchIconStyle, {
-              opacity: this.state.animatedValue.interpolate({
-                inputRange: [0, 70],
-                outputRange: [!this.state.value ? 1 : 0, 0]
-              })
-            }]}>
-            <Image
-              style={styles.searchIconStyle}
-              source={require('../images/icon-search.png')} />
-            <Text style={{
-              marginLeft: 5,
-              color: this.props.searchInputPlaceholderColor,
-              fontSize: 14,
-              backgroundColor: 'rgba(0, 0, 0, 0)'
-            }}>{this.props.placeholder}</Text>
-          </Animated.View>
-        </Animated.View>
-        <View style={{
-          width: buttonWidth,
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
+      <View style={[styles.container, { backgroundColor: this.props.searchBarBackgroundColor }]}>
+        <View style={styles.searchSection}>
+          <View style={[styles.searchInputWrapper, { backgroundColor: this.props.searchInputBackgroundColor }]}>
+            {this.state.isShowHolder && (
+              <Image source={require('../images/icon-search.png')} style={styles.searchIcon} />
+            )}
+            <TextInput
+              ref='input'
+              style={[styles.searchTextInput, {
+                backgroundColor: this.props.searchInputBackgroundColor,
+                color: this.state.isShowHolder ? this.props.searchInputTextColor : this.props.searchInputTextColorActive
+              }]}
+              onChangeText={this.onChange.bind(this)}
+              value={this.state.value}
+              autoCorrect={false}
+              placeholder={this.props.placeholder}
+              placeholderTextColor={this.props.searchInputPlaceholderColor}
+              onFocus={this.onFocus.bind(this)}
+              onBlur={this.onBlur.bind(this)}
+            />
+          </View>
           <TouchableWithoutFeedback onPress={this.cancelSearch.bind(this)}>
-            <View
-              style={{
-                flex: 1,
-                height: Theme.size.searchInputHeight,
-                width: buttonWidth,
-                justifyContent: 'center',
-                alignItems: 'center',
-                borderRadius: 5
-              }}
-              shouldRasterizeIOS
-              renderToHardwareTextureAndroid
-            >
-              <Text
-                style={{color: this.props.cancelTextColor}}
-                numberOfLines={1}>{this.props.cancelTitle}</Text>
-            </View>
+            <Animated.View style={[styles.cancelButton, {
+              transform: [{
+                translateX: this.state.animatedValue.interpolate({
+                  inputRange: [0, buttonWidth],
+                  outputRange: [buttonWidth, 0]
+                })
+              }]
+            }]}>
+              <Text style={[styles.cancelButtonText, { color: this.props.cancelTextColor }]}>
+                {this.props.cancelTitle}
+              </Text>
+            </Animated.View>
           </TouchableWithoutFeedback>
         </View>
       </View>
     )
-  };
+  }
 }
 
 const styles = StyleSheet.create({
-  searchTextInputStyle: {
-    flex: 1,
-    height: 28,
-    padding: 0,
-    paddingLeft: searchIconWidth,
-    paddingRight: 8,
-    borderRadius: 5
+  container: {
+    paddingHorizontal: searchBarHorizontalPadding,
+    height: Theme.size.searchInputHeight,
+    justifyContent: 'center'
   },
-  centerSearchIconStyle: {
-    position: 'absolute',
+  searchSection: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  searchInputWrapper: {
+    flex: 1,
+    height: 36,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignSelf: 'stretch'
+    paddingHorizontal: 12
   },
-  leftSearchIconStyle: {
-    position: 'absolute',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    top: 0,
-    bottom: 0,
-    width: searchIconWidth
+  searchIcon: {
+    width: 14,
+    height: 14,
+    marginRight: 8,
+    tintColor: '#666'
   },
-  searchIconStyle: {
-    width: 12,
-    height: 12
+  searchTextInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 16,
+    padding: 0
+  },
+  cancelButton: {
+    paddingLeft: 16,
+    height: '100%',
+    justifyContent: 'center'
+  },
+  cancelButtonText: {
+    fontSize: 16
   }
 })
