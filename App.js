@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useState} from 'react'
-import { Alert, StyleSheet, LogBox } from 'react-native';
+import { Alert, StyleSheet, LogBox, View as RNView } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font'
 
-
+// Import navigation stacks
 import HomeNavigation from './navigation/HomeNavigation';
 import AuthNavigation from './navigation/AuthNavigation';
 import ApiKeys from './constants/ApiKeys';
@@ -55,7 +55,6 @@ export default function App(){
   }, [])
 
   const onAuthStateChanged = (user) => {
-    setIsAuthenticationReady(true);
     if (user != null) {
       firebase
         .firestore()
@@ -71,9 +70,17 @@ export default function App(){
             );
             firebase.auth().signOut();
           }
+        })
+        .catch((error) => {
+          console.error("Firestore error:", error);
+          setIsAuthenticated(null);
+        })
+        .finally(() => {
+          setIsAuthenticationReady(true);
         });
     } else {
       setIsAuthenticated(null);
+      setIsAuthenticationReady(true);
     }
   };
 
@@ -85,10 +92,12 @@ export default function App(){
   }, [isLoadingComplete, isAuthenticationReady]);
 
   if (!isLoadingComplete || !isAuthenticationReady) {
-    return null;
+    return (
+      <RNView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+        {/* You can add a loading indicator here if you want */}
+      </RNView>
+    );
   }
-
-
 
     return (
         <NavigationContainer theme={theme} style={styles.container}  onReady={onLayoutRootView}>
