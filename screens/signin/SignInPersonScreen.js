@@ -21,10 +21,11 @@ export default class SignInPersonScreen extends React.Component {
       filteredStaffList: [],
       filteredVisitorList: [],
       isLoading: true,
-      error: null
+      isLoadingMore: false,
+      error: null,
+      lastDoc: null,
+      hasMore: true
     }
-    this.unsubscribeVisitor = null;
-    this.unsubscribeStaff = null;
   }
   
   async componentDidMount(){
@@ -33,120 +34,91 @@ export default class SignInPersonScreen extends React.Component {
       const { isVisitor, companyName } = this.props.route.params;
       
       if (!isVisitor) {
-        this.unsubscribeStaff = firebase.firestore()
+        const snapshot = await firebase.firestore()
           .collection('StaffProfiles')
-          .onSnapshot(
-            snapshot => {
-              if (!this._isMounted) return;
-              
-              try {
-                const allStaffs = [];
-                const filteredStaffList = [];
-                
-                snapshot.docs.forEach(doc => {
-                  const data = doc.data();
-                  allStaffs.push(data);
-                  
-                  if (data.branch === companyName) {
-                    filteredStaffList.push({
-                      searchStr: data.name,
-                      contact_no: data.contact_no
-                    });
-                  }
-                });
-                
-                this.setState({
-                  allStaffs,
-                  filteredStaffList,
-                  isLoading: false,
-                  error: null
-                });
-              } catch (error) {
-                console.error('Error processing staff data:', error);
-                this.setState({
-                  isLoading: false,
-                  error: 'Failed to load staff data'
-                });
-              }
-            },
-            error => {
-              console.error('Firestore staff error:', error);
-              this.setState({
-                isLoading: false,
-                error: 'Failed to connect to database'
-              });
-            }
-          );
+          .where('branch', '==', companyName)
+          .limit(100)
+          .get();
+          
+        if (!this._isMounted) return;
+        
+        try {
+          const allStaffs = [];
+          const filteredStaffList = [];
+          
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            allStaffs.push(data);
+            filteredStaffList.push({
+              searchStr: data.name,
+              contact_no: data.contact_no
+            });
+          });
+          
+          this.setState({
+            allStaffs,
+            filteredStaffList,
+            isLoading: false,
+            error: null,
+            lastDoc: snapshot.docs[snapshot.docs.length - 1]
+          });
+        } catch (error) {
+          console.error('Error processing staff data:', error);
+          this.setState({
+            isLoading: false,
+            error: 'Failed to load staff data'
+          });
+        }
       } else {
-        this.unsubscribeVisitor = firebase.firestore()
+        const snapshot = await firebase.firestore()
           .collection('VisitorProfiles')
-          .onSnapshot(
-            snapshot => {
-              if (!this._isMounted) return;
-              
-              try {
-                const allVisitors = [];
-                const filteredVisitorList = [];
-                
-                snapshot.docs.forEach(doc => {
-                  const data = doc.data();
-                  allVisitors.push(data);
-                  
-                  if (data.company === companyName) {
-                    filteredVisitorList.push({
-                      searchStr: data.name,
-                      contact_no: data.contact_no
-                    });
-                  }
-                });
-                
-                this.setState({
-                  allVisitors,
-                  filteredVisitorList,
-                  isLoading: false,
-                  error: null
-                });
-              } catch (error) {
-                console.error('Error processing visitor data:', error);
-                this.setState({
-                  isLoading: false,
-                  error: 'Failed to load visitor data'
-                });
-              }
-            },
-            error => {
-              console.error('Firestore visitor error:', error);
-              this.setState({
-                isLoading: false,
-                error: 'Failed to connect to database'
-              });
-            }
-          );
-      }
-
-      if (this.unsubscribeStaff) {
-        global.subscribers.push(this.unsubscribeStaff);
-      }
-      if (this.unsubscribeVisitor) {
-        global.subscribers.push(this.unsubscribeVisitor);
+          .where('company', '==', companyName)
+          .limit(100)
+          .get();
+          
+        if (!this._isMounted) return;
+        
+        try {
+          const allVisitors = [];
+          const filteredVisitorList = [];
+          
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            allVisitors.push(data);
+            filteredVisitorList.push({
+              searchStr: data.name,
+              contact_no: data.contact_no
+            });
+          });
+          
+          this.setState({
+            allVisitors,
+            filteredVisitorList,
+            isLoading: false,
+            error: null,
+            lastDoc: snapshot.docs[snapshot.docs.length - 1]
+          });
+        } catch (error) {
+          console.error('Error processing visitor data:', error);
+          this.setState({
+            isLoading: false,
+            error: 'Failed to load visitor data'
+          });
+        }
       }
     } catch (error) {
       console.error('ComponentDidMount error:', error);
-      this.setState({
-        isLoading: false,
-        error: 'An unexpected error occurred'
-      });
+      if (this._isMounted) {
+        this.setState({
+          isLoading: false,
+          error: 'An unexpected error occurred'
+        });
+      }
     }
   }
 
   componentWillUnmount() {
     this._isMounted = false;
-    if (this.unsubscribeStaff) {
-      this.unsubscribeStaff();
-    }
-    if (this.unsubscribeVisitor) {
-      this.unsubscribeVisitor();
-    }
   }
   
   checkIfPersonAlreadySignedIn = async (item) => {
@@ -276,6 +248,65 @@ export default class SignInPersonScreen extends React.Component {
     }
   }
 
+  loadMore = async () => {
+    if (this.state.isLoadingMore || !this.state.hasMore) return;
+    
+    try {
+      this.setState({ isLoadingMore: true });
+      const { isVisitor, companyName } = this.props.route.params;
+      
+      let query = firebase.firestore()
+        .collection(isVisitor ? 'VisitorProfiles' : 'StaffProfiles')
+        .where(isVisitor ? 'company' : 'branch', '==', companyName)
+        .orderBy('name')
+        .limit(50);
+        
+      if (this.state.lastDoc) {
+        query = query.startAfter(this.state.lastDoc);
+      }
+      
+      const snapshot = await query.get();
+      
+      if (!this._isMounted) return;
+      
+      if (snapshot.empty) {
+        this.setState({ hasMore: false, isLoadingMore: false });
+        return;
+      }
+      
+      const newDocs = [];
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        newDocs.push({
+          searchStr: data.name,
+          contact_no: data.contact_no
+        });
+      });
+      
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+      
+      if (isVisitor) {
+        this.setState(prevState => ({
+          filteredVisitorList: [...prevState.filteredVisitorList, ...newDocs],
+          lastDoc,
+          isLoadingMore: false
+        }));
+      } else {
+        this.setState(prevState => ({
+          filteredStaffList: [...prevState.filteredStaffList, ...newDocs],
+          lastDoc,
+          isLoadingMore: false
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading more:', error);
+      this.setState({ 
+        isLoadingMore: false,
+        error: 'Failed to load more data'
+      });
+    }
+  }
+
   renderRow = (item, sectionID, rowID, highlightRowFunc, isSearching) => {
     if (!item?.searchStr) {
       console.warn('Invalid item in renderRow:', item);
@@ -317,12 +348,24 @@ export default class SignInPersonScreen extends React.Component {
     )
   }
 
-  render() {
+  renderFooter = () => {
+    if (!this.state.isLoadingMore) return null;
+    
+    return (
+      <View style={styles.footerContainer}>
+        <ActivityIndicator size="small" color="#2F465B" />
+        <Text style={styles.footerText}>Loading more...</Text>
+      </View>
+    );
+  }
+
+  renderSearchList = () => {
     const { 
       filteredStaffList,
       filteredVisitorList,
       isLoading,
-      error
+      error,
+      hasMore 
     } = this.state;
     const { isVisitor } = this.props.route.params;
     
@@ -337,47 +380,88 @@ export default class SignInPersonScreen extends React.Component {
       );
     }
 
+    return (
+      <SearchList
+        data={isVisitor ? filteredVisitorList : filteredStaffList}
+        renderRow={this.renderRow}
+        cellHeight={50}
+        sectionHeaderHeight={30}
+        renderEmpty={this.renderEmpty}
+        renderFooter={this.renderFooter}
+        onEndReached={hasMore ? this.loadMore : null}
+        onEndReachedThreshold={0.5}
+        toolbarBackgroundColor={'#2F465B'}
+        title={isVisitor ? 'SELECT YOUR NAME' : 'SELECT YOUR NAME'}
+        cancelTitle={'Clear'}
+        searchBarBackgroundColor={'#fff'}
+        searchInputBackgroundColor={'#f2f2f2'}
+        searchInputBackgroundColorActive={'#f2f2f2'}
+        searchInputPlaceholderColor={'#666'}
+        searchInputTextColor={'#000'}
+        searchInputTextColorActive={'#000'}
+        searchInputPlaceholder={'Search Name'}
+        sectionIndexTextColor={'#000'}
+        hideSectionList={false}
+      />
+    );
+  }
+
+  render() {
+    const { 
+      filteredStaffList,
+      filteredVisitorList,
+      isLoading,
+      error,
+      hasMore
+    } = this.state;
+    
+    const { isVisitor } = this.props.route.params;
+
     if (error) {
       return (
         <View style={styles.centerContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <Button 
-            mode="contained"
-            onPress={() => this.componentDidMount()}
-            style={styles.retryButton}
-          >
-            Retry
-          </Button>
         </View>
       );
     }
 
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.mainContainer}>
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.container}
         >
           <View style={styles.searchListContainer}>
-            <SearchList
-              data={isVisitor ? filteredVisitorList : filteredStaffList}
-              renderRow={this.renderRow}
-              cellHeight={50}
-              sectionHeaderHeight={30}
-              renderEmpty={this.renderEmpty}
-              toolbarBackgroundColor={'#2F465B'}
-              title={isVisitor ? 'SELECT YOUR NAME' : 'SELECT YOUR NAME'}
-              cancelTitle={'Clear'}
-              searchBarBackgroundColor={'#fff'}
-              searchInputBackgroundColor={'#f2f2f2'}
-              searchInputBackgroundColorActive={'#f2f2f2'}
-              searchInputPlaceholderColor={'#666'}
-              searchInputTextColor={'#000'}
-              searchInputTextColorActive={'#000'}
-              searchInputPlaceholder={'Search Name'}
-              sectionIndexTextColor={'#000'}
-              hideSectionList={false}
-            />
+            {this.renderSearchList()}
+          </View>
+          <View style={styles.buttonVerticalContainer}>
+            <View style={styles.buttonHorizontalContainer}>
+              <View style={styles.buttonContainer}>
+                <Button 
+                  style={styles.buttonText} 
+                  buttonColor={"#2F465B"} 
+                  mode="contained" 
+                  onPress={() => this.props.navigation.goBack()}
+                >
+                  BACK
+                </Button>
+              </View>
+              {global.internetConnectivity && (
+                <View style={styles.buttonContainer}>
+                  <Button 
+                    style={styles.buttonText} 
+                    buttonColor={"#2F465B"} 
+                    mode="contained" 
+                    onPress={() => this.props.navigation.navigate('OtherPerson', {
+                      companyName: this.props.route.params.companyName,
+                      isVisitor: this.props.route.params.isVisitor
+                    })}
+                  >
+                    NEW PERSON
+                  </Button>
+                </View>
+              )}
+            </View>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -386,29 +470,73 @@ export default class SignInPersonScreen extends React.Component {
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff'
+  },
+  searchListContainer: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  buttonVerticalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    marginTop: 50
+  },
+  buttonHorizontalContainer: {
+    flex: 1, 
+    flexDirection: 'row',
+    flexWrap: "wrap",
+    justifyContent: 'space-between',
+  },
+  buttonContainer: {
+    marginVertical: 15,
+    marginHorizontal: 15, 
+    justifyContent: 'flex-end'
+  },
+  buttonText: {
+    justifyContent: 'center'
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    backgroundColor: '#fff'
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666'
+    color: '#2F465B'
   },
   errorText: {
-    color: '#ff3b30',
     fontSize: 16,
+    color: 'red',
     textAlign: 'center',
-    marginBottom: 20
+    margin: 20
   },
-  retryButton: {
-    backgroundColor: '#2F465B'
+  footerContainer: {
+    paddingVertical: 20,
+    alignItems: 'center'
+  },
+  footerText: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 5
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center'
   },
   rowContainer: {
     flex: 1,
@@ -417,9 +545,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   rowTouchable: {
-    flex: 1
-  },
-  searchListContainer: {
     flex: 1
   },
   emptyDataSource: {
@@ -434,4 +559,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20
   }
-})
+});

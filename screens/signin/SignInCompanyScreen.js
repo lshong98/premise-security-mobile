@@ -15,149 +15,248 @@ export default class SignInCompanyScreen extends React.Component {
     this.state = {
       dataSource: [],
       isLoading: true,
-      error: null
+      isLoadingMore: false,
+      error: null,
+      lastDoc: null,
+      hasMore: true,
+      loadingProgress: 0,
+      isSearching: false,
+      searchText: ''
     };
-    this.unsubscribeCompany = null;
+    this.loadTimer = null;
   }
 
   async componentDidMount(){
     this._isMounted = true;
     try {
       const { isVisitor } = this.props.route.params;
+      this.setState({ isLoading: true, error: null });
 
       if(isVisitor){
-        this.setState({ isLoading: true, error: null });
-        this.unsubscribeCompany = firebase.firestore()
-          .collection('CompanyProfiles')
-          .onSnapshot(
-            snapshot => {
-              if (!this._isMounted) return;
-              
-              try {
-                let companies = [];
-                snapshot.docs.forEach(doc => {
-                  const data = doc.data();
-                  if (data && data.name) {
-                    companies.push({
-                      searchStr: data.name,
-                      data: {
-                        ...data,
-                        id: doc.id
-                      }
-                    });
-                  }
-                });
-                
-                // Sort companies alphabetically
-                companies.sort((a, b) => a.searchStr.localeCompare(b.searchStr));
-                
-                this.setState({
-                  dataSource: companies,
-                  isLoading: false,
-                  error: null
-                });
-              } catch (error) {
-                console.error("Error processing companies:", error);
-                this.setState({
-                  isLoading: false,
-                  error: error.message
-                });
-              }
-            },
-            error => {
-              console.error("Error fetching companies:", error);
-              if (this._isMounted) {
-                this.setState({
-                  isLoading: false,
-                  error: error.message
-                });
-              }
-            }
-          );
-      }else if(isVisitor == false){
-        this.unsubscribeCompany = firebase.firestore()
-        .collection('Premises')
-        .onSnapshot(snapshot => {
+        await this.loadInitialCompanies();
+        this.startProgressiveLoading();
+      } else {
+        // For premises, also use get() instead of onSnapshot
+        const snapshot = await firebase.firestore()
+          .collection('Premises')
+          .orderBy('name')  // Add server-side ordering
+          .limit(100)       // Add pagination
+          .get();
+        
+        if (!this._isMounted) return;
+        
+        try {
           let searchList = [];
-          let premiseList = [];
-          if(this._isMounted){
-            snapshot.docs.forEach(doc => {
-              let premiseName = doc.data().name
-              if(premiseName.includes("(")){
-                premiseName = premiseName.substring(0, premiseName.indexOf('('))
-              }
-
-              if(!premiseList.includes(premiseName.trim())){
-                searchList.push({ 'searchStr' : premiseName.trim()})
-                premiseList.push(premiseName.trim())
-              }
-            })
-            this.setState({dataSource: searchList, isLoading: false})
-          }
-        }, error => {
-          console.error("Error fetching premises:", error);
-          this.setState({ isLoading: false, error: error.message });
-        })
+          let premiseList = new Set();  // Use Set for better performance
+          
+          snapshot.docs.forEach(doc => {
+            let premiseName = doc.data().name;
+            if(premiseName.includes("(")){
+              premiseName = premiseName.substring(0, premiseName.indexOf('(')).trim();
+            }
+            
+            if(!premiseList.has(premiseName)){
+              searchList.push({ 'searchStr': premiseName });
+              premiseList.add(premiseName);
+            }
+          });
+          
+          this.setState({
+            dataSource: searchList,
+            isLoading: false,
+            error: null
+          });
+        } catch (error) {
+          console.error("Error processing premises:", error);
+          this.setState({
+            isLoading: false,
+            error: error.message
+          });
+        }
       }
-      if(this.unsubscribeCompany != null)
-        global.subscribers.push(this.unsubscribeCompany)
     } catch (error) {
       console.error("Error in componentDidMount:", error);
-      this.setState({
-        isLoading: false,
-        error: error.message
-      });
+      if (this._isMounted) {
+        this.setState({
+          isLoading: false,
+          error: error.message
+        });
+      }
     }
   }
 
   componentWillUnmount() {
     this._isMounted = false;
-    if (this.unsubscribeCompany) {
-      this.unsubscribeCompany();
+    if (this.loadTimer) {
+      clearTimeout(this.loadTimer);
     }
   }
-  
-  renderSearchList = () => {
-    const { dataSource, isLoading, error } = this.state;
 
+  loadInitialCompanies = async () => {
+    try {
+      const snapshot = await firebase.firestore()
+        .collection('CompanyProfiles')
+        .orderBy('name')
+        .limit(50)
+        .get();
+
+      if (!this._isMounted) return;
+
+      const companies = this.processCompanyDocs(snapshot.docs);
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+      this.setState({
+        dataSource: companies,
+        lastDoc,
+        isLoading: false,
+        loadingProgress: 0
+      });
+    } catch (error) {
+      console.error("Error loading initial companies:", error);
+      this.setState({
+        isLoading: false,
+        error: "Failed to load companies"
+      });
+    }
+  }
+
+  processCompanyDocs = (docs) => {
+    return docs.map(doc => {
+      const data = doc.data();
+      return {
+        searchStr: data.name,
+        data: {
+          ...data,
+          id: doc.id
+        }
+      };
+    }).sort((a, b) => a.searchStr.localeCompare(b.searchStr));
+  }
+
+  loadMoreCompanies = async () => {
+    if (!this.state.hasMore || this.state.isLoadingMore) return;
+
+    try {
+      this.setState({ isLoadingMore: true });
+
+      const snapshot = await firebase.firestore()
+        .collection('CompanyProfiles')
+        .orderBy('name')
+        .startAfter(this.state.lastDoc)
+        .limit(50)
+        .get();
+
+      if (!this._isMounted) return;
+
+      if (snapshot.empty) {
+        this.setState({ 
+          hasMore: false, 
+          isLoadingMore: false,
+          loadingProgress: 100 
+        });
+        if (this.loadTimer) {
+          clearTimeout(this.loadTimer);
+        }
+        return;
+      }
+
+      const newCompanies = this.processCompanyDocs(snapshot.docs);
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+      this.setState(prevState => ({
+        dataSource: [...prevState.dataSource, ...newCompanies],
+        lastDoc,
+        isLoadingMore: false,
+        loadingProgress: Math.min(prevState.loadingProgress + 10, 100)
+      }));
+    } catch (error) {
+      console.error("Error loading more companies:", error);
+      this.setState({ 
+        isLoadingMore: false,
+        error: "Failed to load more companies"
+      });
+    }
+  }
+
+  startProgressiveLoading = () => {
+    if (this.loadTimer) {
+      clearTimeout(this.loadTimer);
+    }
+    
+    this.loadTimer = setInterval(() => {
+      // Only load more if not searching and there's more to load
+      if (!this.state.isSearching && this.state.hasMore && !this.state.isLoadingMore) {
+        this.loadMoreCompanies();
+      }
+    }, 1000);
+  }
+
+  handleSearch = (text) => {
+    this.setState({ 
+      isSearching: text.length > 0,
+      searchText: text
+    });
+    
+    // Pause loading when searching
+    if (text.length > 0) {
+      if (this.loadTimer) {
+        clearTimeout(this.loadTimer);
+        this.loadTimer = null;
+      }
+    } else {
+      // Resume loading when search is cleared
+      this.startProgressiveLoading();
+    }
+  }
+
+  renderSearchList = () => {
+    const { 
+      dataSource, 
+      isLoading, 
+      error, 
+      loadingProgress,
+      hasMore 
+    } = this.state;
+    
     if (isLoading) {
       return (
-        <View style={styles.emptyContainer}>
+        <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#2F465B" />
-          <Text style={styles.emptyText}>Loading companies...</Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, styles.errorText]}>
-            {error}
-          </Text>
+          <Text style={styles.loadingText}>Loading companies...</Text>
         </View>
       );
     }
 
     return (
-      <SearchList
-        data={dataSource}
-        renderRow={this.renderRow}
-        cellHeight={50}
-        sectionHeaderHeight={30}
-        renderEmpty={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No companies found</Text>
-          </View>
-        )}
-        renderEmptyResult={(searchStr) => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              No results found for "{searchStr}"
+      <View style={styles.container}>
+        <SearchList
+          data={dataSource}
+          renderRow={this.renderRow}
+          cellHeight={50}
+          sectionHeaderHeight={30}
+          renderEmpty={this.renderEmpty}
+          toolbarBackgroundColor={'#2F465B'}
+          title={'SELECT COMPANY'}
+          cancelTitle={'Clear'}
+          searchBarBackgroundColor={'#fff'}
+          searchInputBackgroundColor={hasMore ? '#e0e0e0' : '#f2f2f2'}
+          searchInputBackgroundColorActive={hasMore ? '#e0e0e0' : '#f2f2f2'}
+          searchInputPlaceholderColor={'#666'}
+          searchInputTextColor={'#000'}
+          searchInputTextColorActive={'#000'}
+          searchInputPlaceholder={hasMore ? 'Please wait, loading all companies...' : 'Search Company'}
+          sectionIndexTextColor={'#000'}
+          editable={!hasMore}
+        />
+        {hasMore && loadingProgress < 100 && (
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>
+              Loading companies ({loadingProgress}%)...
             </Text>
+            <ActivityIndicator size="small" color="#2F465B" />
           </View>
         )}
-      />
+      </View>
     );
   }
 
@@ -300,5 +399,21 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     justifyContent: 'center'
+  },
+  progressContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  progressText: {
+    color: '#666',
+    fontSize: 14,
+    marginRight: 10
   }
 })

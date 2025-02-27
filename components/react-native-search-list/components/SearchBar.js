@@ -38,7 +38,8 @@ export default class SearchBar extends Component {
 
     searchBarBackgroundColor: PropTypes.string, // active state background color for the search bar
 
-    isShowHolder: PropTypes.bool // 是否显示搜索图标
+    isShowHolder: PropTypes.bool, // 是否显示搜索图标
+    editable: PropTypes.bool // whether the search input is editable
   }
 
   static defaultProps = {
@@ -52,7 +53,8 @@ export default class SearchBar extends Component {
     searchBarBackgroundColor: '#171a23',
 
     cancelTextColor: 'white',
-    cancelTitle: 'Cancel'
+    cancelTitle: 'Cancel',
+    editable: true
   }
 
   constructor (props) {
@@ -137,13 +139,14 @@ export default class SearchBar extends Component {
 
   render () {
     return (
-      <View style={[styles.container, { backgroundColor: this.props.searchBarBackgroundColor }]}>
+      <View style={[styles.container, {backgroundColor: this.props.searchBarBackgroundColor}]}>
         <View style={styles.searchSection}>
-          <View style={[styles.searchInputWrapper, { backgroundColor: this.props.searchInputBackgroundColor }]}>
+          <View style={[styles.searchInputWrapper, {backgroundColor: this.props.searchInputBackgroundColor}]}>
             {this.state.isShowHolder && (
               <Image source={require('../images/icon-search.png')} style={styles.searchIcon} />
             )}
             <TextInput
+              editable={this.props.editable}
               ref='input'
               style={[styles.searchTextInput, {
                 backgroundColor: this.props.searchInputBackgroundColor,
@@ -167,7 +170,7 @@ export default class SearchBar extends Component {
                 })
               }]
             }]}>
-              <Text style={[styles.cancelButtonText, { color: this.props.cancelTextColor }]}>
+              <Text style={[styles.cancelButtonText, {color: this.props.cancelTextColor}]}>
                 {this.props.cancelTitle}
               </Text>
             </Animated.View>
