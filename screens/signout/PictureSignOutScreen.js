@@ -8,6 +8,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 import 'firebase/compat/storage';
 import * as ImageManipulator from "expo-image-manipulator";
+import NetInfo from "@react-native-community/netinfo";
 
 const { width } = Dimensions.get('screen');
 
@@ -17,23 +18,15 @@ export default function PictureSignOutScreen({navigation, route}){
   const [photo, setPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const [isConnected, setIsConnected] = useState(false);
   const cameraRef = useRef(null);
-  // constructor(props){
-  //   super(props);
-  //   this.state = {
-  //     hasCameraPermission: null,
-  //     type: Camera.Constants.Type.front,
-  //     photo: null,
-  //     resizedPhoto: null,
-  //     uploading: false,
-  //     image: null,
-  //   }
-  // }
 
-  // async componentDidMount() {
-  //   const { status } = await Camera.requestCameraPermissionsAsync();
-  //   this.setState({ hasCameraPermission: sta tus === 'granted' });
-  // }
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+    });
+    return unsubscribe;
+  }, []);
 
   const submitData = (imageUrl) => {
     const docID = route.params.docID;
@@ -55,6 +48,18 @@ export default function PictureSignOutScreen({navigation, route}){
   const submitImage = async () => {
     if(photo == null){
       Alert.alert('Please take a photo first')
+    } else if (!isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please check your internet connection and try again',
+        [
+          {
+            text: 'OK',
+            onPress: () => {}
+          }
+        ],
+        { cancelable: false }
+      );
     } else {
       setUploading(true);
       try {
@@ -62,7 +67,17 @@ export default function PictureSignOutScreen({navigation, route}){
         await submitData(uploadUrl);
       } catch (e) {
         console.log(e);
-        alert('Upload failed, please check your internet connection or try again');
+        Alert.alert(
+          'Upload Failed',
+          'Please check your internet connection or try again',
+          [
+            {
+              text: 'OK',
+              onPress: () => {}
+            }
+          ],
+          { cancelable: false }
+        );
       } finally {
         setUploading(false);
       }
@@ -90,24 +105,6 @@ export default function PictureSignOutScreen({navigation, route}){
       setPhoto(photoData.uri);
     }
   }
-  // renderCamera(){
-  //   return(
-  //     <Camera style={{flex: 1}} type={this.state.type} ref={ref => {this.camera = ref}}>
-  //       <TouchableOpacity style={styles.cameraFlipDeleteButton}  onPress={this.cameraFlip}>
-  //           <Ionicons name="camera" size={50} color="white" />
-  //       </TouchableOpacity>
-  //     </Camera>
-  //   );
-  // }
-  // renderImage(){
-  //   return(
-  //     <ImageBackground resizeMode='cover' style={{flex: 1, transform: [{scaleX: -1}]}} source={{uri: this.state.photo}}>
-  //       <TouchableOpacity style={styles.cameraFlipDeleteButton} onPress={() => this.setState({ photo: null })}>
-  //           <Ionicons name="close-outline" size={50} color="white" />
-  //       </TouchableOpacity>
-  //     </ImageBackground>
-  //   )
-  // }
 
   if (!permission) {
     return <View />;
@@ -241,29 +238,37 @@ function uuidv4() {
   });
 }
 
-
 async function uploadImageAsync(uri) {
-  const blob = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = function() {
-      resolve(xhr.response);
-    };
-    xhr.onerror = function(e) {
-      console.log(e);
-      reject(new TypeError('Network request failed'));
-    };
-    xhr.responseType = 'blob';
-    xhr.open('GET', uri, true);
-    xhr.send(null);
-  });
+  try {
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(xhr.response);
+        } else {
+          reject(new Error('Failed to load image with status: ' + xhr.status));
+        }
+      };
+      xhr.onerror = function(e) {
+        console.log(e);
+        reject(new TypeError('Network request failed'));
+      };
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
 
-  const ref = firebase
-    .storage()
-    .ref()
-    .child('entries/' + uuidv4() + '.jpg');
+    const ref = firebase
+      .storage()
+      .ref()
+      .child('entries/' + uuidv4() + '.jpg');
     const snapshot = await ref.put(blob, {cacheControl: 'private, max-age=7200', contentType: 'image/jpg'});
 
-  blob.close();
+    blob.close();
 
-  return await snapshot.ref.getDownloadURL();
+    return await snapshot.ref.getDownloadURL();
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw new Error('Failed to upload image: ' + error.message);
+  }
 }

@@ -8,6 +8,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/storage';
 import 'firebase/compat/firestore';
 import * as ImageManipulator from "expo-image-manipulator";
+import NetInfo from "@react-native-community/netinfo";
 
 const { width } = Dimensions.get('screen');
 
@@ -19,12 +20,20 @@ export default function PictureSignInScreen({navigation, route}) {
   const [signedIn, setSignedIn] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [isShowingError, setIsShowingError] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
   const cameraRef = useRef(null);
 
   useEffect(() => {
     if(route.params.from === 'EZSignIn'){
       checkIfPersonAlreadySignedIn();
     }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+    });
+    return () => unsubscribe();
   }, []);
 
   const checkIfPersonAlreadySignedIn = async () => {
@@ -114,6 +123,18 @@ export default function PictureSignInScreen({navigation, route}) {
   const submitImage = async () => {
     if(photo == null){
       Alert.alert('Please take a photo first')
+    } else if (!isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please check your internet connection and try again',
+        [
+          {
+            text: 'OK',
+            onPress: () => {}
+          }
+        ],
+        { cancelable: false }
+      );
     } else { 
       if (uploading) return; // Prevent multiple uploads
       setUploading(true);
