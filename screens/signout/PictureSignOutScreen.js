@@ -61,15 +61,50 @@ export default function PictureSignOutScreen({navigation, route}){
         { cancelable: false }
       );
     } else {
+      if (uploading) return; // Prevent multiple uploads
       setUploading(true);
+      
+      // Set a timeout to handle stalled uploads
+      const uploadTimeout = setTimeout(() => {
+        if (uploading) {
+          setUploading(false);
+          Alert.alert(
+            'Upload Timeout',
+            'The upload is taking longer than expected. Please try again.',
+            [{ text: 'OK' }],
+            { cancelable: false }
+          );
+        }
+      }, 60000); // 60 second timeout
+      
       try {
         let uploadUrl = await uploadImageAsync(resizedPhoto);
-        await submitData(uploadUrl);
+        clearTimeout(uploadTimeout);
+        
+        // Get the docID exactly as passed from HomeScreen
+        const docID = route.params.docID;
+        
+        if (!docID) {
+          throw new Error("Document ID is undefined. Can't update Firestore document.");
+        }
+        
+        await firebase.firestore()
+          .collection('Entries')
+          .doc(docID)
+          .update({
+            sign_out_time: firebase.firestore.Timestamp.fromDate(new Date()),
+            sign_out_photo: uploadUrl
+          });
+        
+        navigation.navigate('Home');
       } catch (e) {
-        console.log(e);
+        console.log("Upload error:", e);
+        clearTimeout(uploadTimeout);
+        setUploading(false);
+        
         Alert.alert(
           'Upload Failed',
-          'Please check your internet connection or try again',
+          'Please check your internet connection or try again: ' + e.message,
           [
             {
               text: 'OK',
@@ -78,10 +113,7 @@ export default function PictureSignOutScreen({navigation, route}){
           ],
           { cancelable: false }
         );
-      } finally {
-        setUploading(false);
       }
-
     }
   };
 
@@ -240,33 +272,76 @@ function uuidv4() {
 
 async function uploadImageAsync(uri) {
   try {
-    const blob = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(xhr.response);
-        } else {
-          reject(new Error('Failed to load image with status: ' + xhr.status));
+    // First check if we're connected
+    const networkState = await NetInfo.fetch();
+    if (!networkState.isConnected) {
+      throw new Error('No internet connection. Please try again when connected.');
+    }
+    
+    // Use fetch instead of XMLHttpRequest for better compatibility on Android
+    let blob;
+    try {
+      const response = await fetch(uri);
+      blob = await response.blob();
+    } catch (fetchError) {
+      // Fallback to traditional method
+      blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.timeout = 30000;
+        
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response);
+          } else {
+            reject(new Error(`Failed to create blob: HTTP status ${xhr.status}`));
+          }
+        };
+        
+        xhr.ontimeout = function() {
+          reject(new Error('Network request timed out'));
+        };
+        
+        xhr.onerror = function(e) {
+          reject(new Error('Network request failed: ' + (e.message || 'Unknown error')));
+        };
+        
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        
+        try {
+          xhr.send(null);
+        } catch (sendError) {
+          reject(sendError);
         }
-      };
-      xhr.onerror = function(e) {
-        console.log(e);
-        reject(new TypeError('Network request failed'));
-      };
-      xhr.responseType = 'blob';
-      xhr.open('GET', uri, true);
-      xhr.send(null);
-    });
-
+      });
+    }
+    
+    // Create a unique filename
+    const filename = 'entries/' + uuidv4() + '.jpg';
+    
     const ref = firebase
       .storage()
       .ref()
-      .child('entries/' + uuidv4() + '.jpg');
-    const snapshot = await ref.put(blob, {cacheControl: 'private, max-age=7200', contentType: 'image/jpg'});
-
+      .child(filename);
+    
+    const metadata = {
+      contentType: 'image/jpeg',
+      cacheControl: 'private, max-age=7200'
+    };
+    
+    // Set upload retry options
+    const uploadTask = ref.put(blob, metadata);
+    
+    // Wait for upload to complete
+    const snapshot = await uploadTask;
+    
+    // Close the blob when we're done
     blob.close();
-
-    return await snapshot.ref.getDownloadURL();
+    
+    // Get the download URL
+    const downloadURL = await snapshot.ref.getDownloadURL();
+    
+    return downloadURL;
   } catch (error) {
     console.error('Error uploading image:', error);
     throw new Error('Failed to upload image: ' + error.message);

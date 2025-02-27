@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react'
-import { Alert, StyleSheet, LogBox, View as RNView } from 'react-native';
+import { Alert, StyleSheet, LogBox, View as RNView, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font'
@@ -11,6 +11,7 @@ import ApiKeys from './constants/ApiKeys';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
+import 'firebase/compat/storage'; // Import Firebase Storage
 import {decode, encode} from 'base-64'
 import _ from 'lodash';
 if (!global.btoa) {  global.btoa = encode }
@@ -19,6 +20,51 @@ if (!global.atob) { global.atob = decode }
 LogBox.ignoreLogs(['Setting a timer']);
 LogBox.ignoreLogs(['Warning: ...']);
 LogBox.ignoreAllLogs();
+
+// Initialize Firebase at module level
+if(!firebase.apps.length){
+  console.log("Initializing Firebase...");
+  try {
+    firebase.initializeApp(ApiKeys.firebaseConfig);
+    
+    // Configure Firestore with appropriate settings
+    const db = firebase.firestore();
+    
+    // Platform-specific settings
+    if (Platform.OS === 'android') {
+      // Android-specific settings
+      db.settings({
+        cacheSizeBytes: 50 * 1024 * 1024, // 50MB cache
+        ignoreUndefinedProperties: true,
+        merge: true // This prevents warnings
+      });
+      
+      // Disable persistence on Android since it's causing issues
+      firebase.firestore().settings({
+        persistence: false
+      });
+      
+      // Set log level for Android
+      firebase.firestore.setLogLevel('error');
+      
+      // Configure Storage for Android
+      const storage = firebase.storage();
+      storage.setMaxUploadRetryTime(60000); // 60 seconds
+      storage.setMaxOperationRetryTime(30000); // 30 seconds
+      console.log("Firebase Storage configured for Android");
+    } else {
+      // iOS settings
+      db.settings({
+        cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+        merge: true
+      });
+    }
+    
+    console.log(`Firebase initialized with ${Platform.OS}-specific settings`);
+  } catch (error) {
+    console.error("Firebase initialization error:", error);
+  }
+}
 
 export default function App(){
   const [isLoadingComplete, setIsLoadingComplete] = useState(false);
@@ -42,9 +88,7 @@ export default function App(){
         });
         setIsLoadingComplete(true);
 
-        if(!firebase.apps.length){
-          firebase.initializeApp(ApiKeys.firebaseConfig);
-        }
+        // Firebase is already initialized above, just setup auth listener
         firebase.auth().onAuthStateChanged(onAuthStateChanged);
       }catch(e){
         console.warn(e)
