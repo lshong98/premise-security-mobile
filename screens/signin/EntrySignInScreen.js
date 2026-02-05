@@ -282,6 +282,7 @@ export default function EntrySignInScreen({navigation, route}) {
             ]}
             containerStyle={styles.dropdown}
             listMode="SCROLLVIEW"
+            zIndex={5000}
           />
         </View>
 
@@ -306,49 +307,39 @@ export default function EntrySignInScreen({navigation, route}) {
             ]}
             containerStyle={styles.dropdown}
             listMode="SCROLLVIEW"
+            zIndex={4000}
           />
         </View>
         {visitPurpose === 'Visit/Meeting/Audit/Inspection' && (
-          <>
-            <View style={[
-              styles.dropdownContainer,
-              Platform.OS !== 'android' && { zIndex: 3000 }
-            ]}>
-              <Text style={styles.inputLabel}>Person I am meeting</Text>
-              <DropDownPicker
-                open={staffDropdownOpen}
-                setOpen={setStaffDropdownOpen}
-                value={personMeeting}
-                setValue={setPersonMeeting}
-                items={staffNames}
-                containerStyle={styles.dropdown}
-                listMode="SCROLLVIEW"
-                onChangeValue={value => {
-                  staffProfiles.forEach((staff) => {
-                    if(staff.name === value){
-                      setPersonDepartment(staff.department);
-                    }
-                  });
-                }}
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Department of the person I am meeting</Text>
-              <TextInput
-                mode='outlined'
-                style={styles.inputTextField}
-                value={personDepartment}
-                editable={false}
-              />
-            </View>
-          </>
-        )}
-        {visitPurpose === 'Walk-in customer' && (
           <View style={[
             styles.dropdownContainer,
             Platform.OS !== 'android' && { zIndex: 3000 }
           ]}>
-            <Text style={styles.inputLabel}>Walk in area</Text>
+            <Text style={styles.inputLabel}>Person to meet: </Text>
+            <DropDownPicker
+              open={staffDropdownOpen}
+              setOpen={setStaffDropdownOpen}
+              value={personMeeting}
+              setValue={setPersonMeeting}
+              items={staffNames}
+              containerStyle={styles.dropdown}
+              listMode="SCROLLVIEW"
+              zIndex={3000}
+              onChangeValue={(value) => {
+                const staff = staffProfiles.find(s => s.name === value);
+                if (staff) {
+                  setPersonDepartment(staff.department);
+                }
+              }}
+            />
+          </View>
+        )}
+        {visitPurpose === 'Walk-in customer' && (
+          <View style={[
+            styles.dropdownContainer,
+            Platform.OS !== 'android' && { zIndex: 2000 }
+          ]}>
+            <Text style={styles.inputLabel}>Walk-in Area: </Text>
             <DropDownPicker
               open={areaDropdownOpen}
               setOpen={setAreaDropdownOpen}
@@ -360,6 +351,7 @@ export default function EntrySignInScreen({navigation, route}) {
               ]}
               containerStyle={styles.dropdown}
               listMode="SCROLLVIEW"
+              zIndex={2000}
             />
           </View>
         )}

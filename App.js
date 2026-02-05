@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import React, {useCallback, useEffect, useState} from 'react'
 import { Alert, StyleSheet, LogBox, View as RNView, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -19,7 +20,8 @@ if (!global.atob) { global.atob = decode }
 
 LogBox.ignoreLogs(['Setting a timer']);
 LogBox.ignoreLogs(['Warning: ...']);
-LogBox.ignoreAllLogs();
+LogBox.ignoreLogs(['A props object containing a "key" prop is being spread']);
+// LogBox.ignoreAllLogs(); // Temporarily commented to see full errors
 
 // Initialize Firebase at module level
 if(!firebase.apps.length){

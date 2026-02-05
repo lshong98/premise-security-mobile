@@ -66,6 +66,7 @@ export default class SearchBar extends Component {
     }
     this._isMounted = false;
     this.animation = null;
+    this.inputRef = React.createRef();
   }
 
   componentDidMount() {
@@ -128,9 +129,9 @@ export default class SearchBar extends Component {
 
   cancelSearch () {
     if (!this._isMounted) return;
-    if (this.refs.input) {
-      this.refs.input.clear()
-      this.refs.input.blur()
+    if (this.inputRef.current) {
+      this.inputRef.current.clear()
+      this.inputRef.current.blur()
     }
     this.onChange('')
     this.searchingAnimation(false)
@@ -147,7 +148,7 @@ export default class SearchBar extends Component {
             )}
             <TextInput
               editable={this.props.editable}
-              ref='input'
+              ref={this.inputRef}
               style={[styles.searchTextInput, {
                 backgroundColor: this.props.searchInputBackgroundColor,
                 color: this.state.isShowHolder ? this.props.searchInputTextColor : this.props.searchInputTextColorActive
