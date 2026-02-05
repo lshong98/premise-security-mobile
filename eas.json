@@ -13,6 +13,7 @@
     "preview": {
       "distribution": "internal",
       "node": "22.12.0",
+      "npmInstallCommand": "npm install --legacy-peer-deps",
       "ios": {
         "resourceClass": "m1-medium"
       },
