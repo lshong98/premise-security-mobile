@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { StyleSheet, View, Dimensions, SafeAreaView, KeyboardAvoidingView, Platform, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Dimensions, SafeAreaView, KeyboardAvoidingView, Platform, Text, ActivityIndicator, TouchableOpacity, FlatList } from 'react-native';
 import SearchList from '../../components/react-native-search-list';
+import SearchBar from '../../components/react-native-search-list/components/SearchBar';
 import Touchable from '../../components/react-native-search-list/utils/Touchable';
 import { Button } from 'react-native-paper';
 import firebase from 'firebase/compat/app';
@@ -14,27 +15,32 @@ export default class SignInCompanyScreen extends React.Component {
     super(props);
     this.state = {
       dataSource: [],
-      isLoading: true,
+      isLoading: false,
       isLoadingMore: false,
       error: null,
       lastDoc: null,
-      hasMore: true,
+      hasMore: false,
       loadingProgress: 0,
       isSearching: false,
       searchText: ''
     };
     this.loadTimer = null;
+    this.searchTimer = null;
   }
 
   async componentDidMount(){
     this._isMounted = true;
     try {
       const { isVisitor } = this.props.route.params;
-      this.setState({ isLoading: true, error: null });
+      this.setState({ isLoading: false, error: null });
 
       if(isVisitor){
-        await this.loadInitialCompanies();
-        this.startProgressiveLoading();
+        // Don't load all companies on mount - wait for user to search
+        // Show empty state with search prompt instead
+        this.setState({
+          isLoading: false,
+          dataSource: []
+        });
       } else {
         // For premises, also use get() instead of onSnapshot
         const snapshot = await firebase.firestore()
@@ -105,6 +111,8 @@ export default class SignInCompanyScreen extends React.Component {
       const companies = this.processCompanyDocs(snapshot.docs);
       const lastDoc = snapshot.docs[snapshot.docs.length - 1];
 
+      console.log(`[PERFORMANCE] Initial companies loaded: ${companies.length}`);
+
       this.setState({
         dataSource: companies,
         lastDoc,
@@ -163,12 +171,17 @@ export default class SignInCompanyScreen extends React.Component {
       const newCompanies = this.processCompanyDocs(snapshot.docs);
       const lastDoc = snapshot.docs[snapshot.docs.length - 1];
 
-      this.setState(prevState => ({
-        dataSource: [...prevState.dataSource, ...newCompanies],
-        lastDoc,
-        isLoadingMore: false,
-        loadingProgress: Math.min(prevState.loadingProgress + 10, 100)
-      }));
+      this.setState(prevState => {
+        const totalCompanies = prevState.dataSource.length + newCompanies.length;
+        console.log(`[PERFORMANCE] Total companies loaded: ${totalCompanies} (added ${newCompanies.length})`);
+
+        return {
+          dataSource: [...prevState.dataSource, ...newCompanies],
+          lastDoc,
+          isLoadingMore: false,
+          loadingProgress: Math.min(prevState.loadingProgress + 10, 100)
+        };
+      });
     } catch (error) {
       console.error("Error loading more companies:", error);
       this.setState({ 
@@ -191,31 +204,91 @@ export default class SignInCompanyScreen extends React.Component {
     }, 1000);
   }
 
-  handleSearch = (text) => {
-    this.setState({ 
+  handleSearch = async (text) => {
+    console.log(`[SEARCH] handleSearch called with: "${text}"`);
+
+    this.setState({
       isSearching: text.length > 0,
       searchText: text
     });
-    
-    // Pause loading when searching
-    if (text.length > 0) {
-      if (this.loadTimer) {
-        clearTimeout(this.loadTimer);
-        this.loadTimer = null;
-      }
-    } else {
-      // Resume loading when search is cleared
-      this.startProgressiveLoading();
+
+    // Clear any existing timers
+    if (this.loadTimer) {
+      clearTimeout(this.loadTimer);
+      this.loadTimer = null;
+    }
+
+    // If search is empty, clear results
+    if (!text || text.length === 0) {
+      console.log('[SEARCH] Empty search, clearing results');
+      this.setState({ dataSource: [] });
+      return;
+    }
+
+    // Only search when user types at least 2 characters
+    if (text.length < 2) {
+      console.log('[SEARCH] Less than 2 characters, waiting...');
+      return;
+    }
+
+    // Debounce the search
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+
+    console.log('[SEARCH] Setting up debounce timer');
+    this.searchTimer = setTimeout(async () => {
+      console.log('[SEARCH] Debounce complete, calling searchCompanies');
+      await this.searchCompanies(text);
+    }, 300); // Wait 300ms after user stops typing
+  }
+
+  searchCompanies = async (searchText) => {
+    try {
+      console.log(`[SEARCH] searchCompanies called with: "${searchText}"`);
+      this.setState({ isLoading: true });
+
+      // Capitalize first letter to match most company names
+      const capitalizedSearch = searchText.charAt(0).toUpperCase() + searchText.slice(1);
+      console.log(`[SEARCH] Searching with capitalized: "${capitalizedSearch}"`);
+
+      // Search using range query for prefix search
+      console.log('[SEARCH] Querying Firestore...');
+      const snapshot = await firebase.firestore()
+        .collection('CompanyProfiles')
+        .orderBy('name')
+        .where('name', '>=', capitalizedSearch)
+        .where('name', '<=', capitalizedSearch + '\uf8ff')
+        .limit(50)
+        .get();
+
+      console.log(`[SEARCH] Firestore returned ${snapshot.docs.length} docs`);
+
+      if (!this._isMounted) return;
+
+      const companies = this.processCompanyDocs(snapshot.docs);
+
+      console.log(`[PERFORMANCE] Search for "${searchText}" returned ${companies.length} companies`);
+
+      this.setState({
+        dataSource: companies,
+        isLoading: false
+      });
+    } catch (error) {
+      console.error("[SEARCH] Error searching companies:", error);
+      this.setState({
+        isLoading: false,
+        error: "Search failed. Please try again."
+      });
     }
   }
 
   renderSearchList = () => {
-    const { 
-      dataSource, 
-      isLoading, 
-      error, 
-      loadingProgress,
-      hasMore 
+    const {
+      dataSource = [],
+      isLoading = false,
+      error = null,
+      searchText = ''
     } = this.state;
     
     if (isLoading) {
@@ -228,34 +301,53 @@ export default class SignInCompanyScreen extends React.Component {
     }
 
     return (
-      <View style={styles.container}>
-        <SearchList
-          data={dataSource}
-          renderRow={this.renderRow}
-          cellHeight={50}
-          sectionHeaderHeight={30}
-          renderEmpty={this.renderEmpty}
-          toolbarBackgroundColor={'#2F465B'}
-          title={'SELECT COMPANY'}
-          cancelTitle={'Clear'}
+      <View style={styles.fullContainer}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerTitle}>SELECT COMPANY</Text>
+        </View>
+        <SearchBar
+          placeholder={'Type to search company...'}
+          onChange={this.handleSearch}
+          value={searchText}
           searchBarBackgroundColor={'#fff'}
-          searchInputBackgroundColor={hasMore ? '#e0e0e0' : '#f2f2f2'}
-          searchInputBackgroundColorActive={hasMore ? '#e0e0e0' : '#f2f2f2'}
+          searchInputBackgroundColor={'#f2f2f2'}
           searchInputPlaceholderColor={'#666'}
           searchInputTextColor={'#000'}
           searchInputTextColorActive={'#000'}
-          searchInputPlaceholder={hasMore ? 'Please wait, loading all companies...' : 'Search Company'}
-          sectionIndexTextColor={'#000'}
-          editable={!hasMore}
+          cancelTitle={'Done'}
         />
-        {hasMore && loadingProgress < 100 && (
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>
-              Loading companies ({loadingProgress}%)...
-            </Text>
-            <ActivityIndicator size="small" color="#2F465B" />
-          </View>
-        )}
+
+        <View style={styles.contentContainer}>
+          {dataSource.length > 0 && (
+            <FlatList
+              data={dataSource}
+              renderItem={({ item }) => this.renderRow(item)}
+              keyExtractor={(item, index) => item.searchStr + index}
+              style={styles.flatList}
+            />
+          )}
+
+          {dataSource.length === 0 && !isLoading && searchText.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                Type in the search box above to find a company
+              </Text>
+              <Text style={styles.emptySubtext}>
+                (At least 2 characters)
+              </Text>
+            </View>
+          )}
+          {dataSource.length === 0 && !isLoading && searchText.length >= 2 && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                No companies found matching "{searchText}"
+              </Text>
+              <Text style={styles.emptySubtext}>
+                Try a different search term
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     );
   }
@@ -337,6 +429,37 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#fff',
   },
+  fullContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  headerContainer: {
+    backgroundColor: '#2F465B',
+    padding: 15,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  flatList: {
+    flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
   searchListContainer: {
     flex: 1,
     width: '100%',
@@ -379,6 +502,12 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 10
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 5
   },
   errorText: {
     color: '#ff3b30'

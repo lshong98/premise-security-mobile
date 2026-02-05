@@ -91,6 +91,8 @@ export default class SignInPersonScreen extends React.Component {
             });
           });
           
+          console.log(`[PERFORMANCE] Loaded ${allVisitors.length} visitors for company: ${companyName}`);
+
           this.setState({
             allVisitors,
             filteredVisitorList,

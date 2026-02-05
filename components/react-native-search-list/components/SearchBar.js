@@ -73,6 +73,14 @@ export default class SearchBar extends Component {
     this._isMounted = true;
   }
 
+  componentDidUpdate(prevProps) {
+    // Update internal state if the value prop changes from parent
+    if (this.props.value !== prevProps.value && this.props.value !== this.state.value) {
+      console.log(`[SearchBar] componentDidUpdate: updating value from "${this.state.value}" to "${this.props.value}"`);
+      this.setState({ value: this.props.value || '' });
+    }
+  }
+
   componentWillUnmount() {
     this._isMounted = false;
     if (this.animation) {
@@ -82,6 +90,7 @@ export default class SearchBar extends Component {
 
   onChange (str) {
     if (!this._isMounted) return;
+    console.log(`[SearchBar] onChange called with: "${str}"`);
     this.props.onChange && this.props.onChange(str)
     this.setState({ value: str })
   }
@@ -128,12 +137,14 @@ export default class SearchBar extends Component {
   }
 
   cancelSearch () {
+    console.log('[SearchBar] cancelSearch called');
     if (!this._isMounted) return;
     if (this.inputRef.current) {
-      this.inputRef.current.clear()
+      // Don't clear the input, just blur it so users can see what they searched
+      console.log('[SearchBar] Blurring input, NOT clearing');
       this.inputRef.current.blur()
     }
-    this.onChange('')
+    // Don't call onChange('') to keep the search text visible
     this.searchingAnimation(false)
     this.props.onClickCancel && this.props.onClickCancel()
   }
