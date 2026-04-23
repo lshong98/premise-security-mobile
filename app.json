@@ -46,7 +46,9 @@
     "plugins": [
       "expo-camera",
       "expo-location",
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
     ]
   }
 }

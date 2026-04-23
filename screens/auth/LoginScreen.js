@@ -1,8 +1,9 @@
 import React, { Component } from 'react'
-import { View, KeyboardAvoidingView, StyleSheet, ImageBackground, Dimensions, 
+import { View, KeyboardAvoidingView, StyleSheet, ImageBackground, Dimensions,
   Platform, Alert, Image, Keyboard, TouchableWithoutFeedback } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextInput, Button, Text } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../constants';
 import NetInfo from "@react-native-community/netinfo";
 import firebase from 'firebase/compat/app';
@@ -84,19 +85,21 @@ export default class LoginScreen extends Component {
   render() {
     return (
       <ImageBackground source={require('../../assets/images/login_bg.jpg')} style={{width, height}}>
-        <KeyboardAvoidingView style={styles.backgroundDim} behavior="padding" enabled   keyboardVerticalOffset={100}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.container}>
-                <View style={styles.inner} >
-                  <View style={styles.logoContainer}>
-                    <Image style = {styles.logoImage} source={require('../../assets/images/logo.png')} resizeMode={'contain'} />
-                    <Text style={styles.logoTitle}>Log In to Trienekens Premise Security </Text>
+        <SafeAreaView style={styles.backgroundDim} edges={['top', 'bottom']}>
+          <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.container}>
+                  <View style={styles.inner} >
+                    <View style={styles.logoContainer}>
+                      <Image style = {styles.logoImage} source={require('../../assets/images/logo.png')} resizeMode={'contain'} />
+                      <Text style={styles.logoTitle}>Log In to Trienekens Premise Security </Text>
+                    </View>
+                    {this.loginForm()}
                   </View>
-                  {this.loginForm()}
-                </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </ImageBackground>
     )
   }
@@ -105,9 +108,12 @@ export default class LoginScreen extends Component {
 
 
 const styles = StyleSheet.create({
-  backgroundDim: { 
+  backgroundDim: {
     flex: 1,
-    backgroundColor: Platform.OS === 'ios' ? 'rgba(0,0,0,.7)' : 'rgba(0,0,0,.65)', 
+    backgroundColor: Platform.OS === 'ios' ? 'rgba(0,0,0,.7)' : 'rgba(0,0,0,.65)',
+  },
+  flex: {
+    flex: 1,
   },
   container: {
     flex: 1,

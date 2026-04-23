@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, Dimensions, View, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView } from 'react-native';
+import { StyleSheet, ScrollView, Dimensions, View, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 import { Divider, Button, Text, TextInput} from 'react-native-paper';
@@ -195,8 +196,9 @@ export default class RollCallScreen extends React.Component {
 
 
     return(
-      <KeyboardAvoidingView style={{ flex: 1, flexDirection: 'column',justifyContent: 'center',}} behavior="padding" enabled   keyboardVerticalOffset={100}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} >
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+          <ScrollView style={styles.container} showsVerticalScrollIndicator={false} >
         <Text style={styles.testbranchTitle}>Premise {'\n'}— {global.premiseLocation}</Text>
         <Text style={styles.testlistTitle}>VISITORS - {this.state.visitorState.length}</Text>
         <Divider style={{height: 1}}/>
@@ -219,10 +221,11 @@ export default class RollCallScreen extends React.Component {
           />
         </View>
         <View style={{flexDirection: 'row', bottom: 0, justifyContent:'center', marginBottom: 50}}>
-          <Button buttonColor='rgb(21, 31, 53)' mode="contained" onPress={this.sendSMS}>SEND ALERT MESSAGE</Button> 
+          <Button buttonColor='rgb(21, 31, 53)' mode="contained" onPress={this.sendSMS}>SEND ALERT MESSAGE</Button>
         </View>
-      </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     )
   }
 
@@ -243,6 +246,13 @@ export default class RollCallScreen extends React.Component {
 
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  keyboardView: {
+    flex: 1
+  },
   container: {
     marginHorizontal: 15,
   },

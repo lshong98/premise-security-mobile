@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Alert, ImageBackground, Image, Dimensions, StyleSheet} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Block, Text } from '../../components';
 import DropDownPicker from 'react-native-dropdown-picker';
 import NetInfo from "@react-native-community/netinfo";
@@ -130,7 +131,8 @@ export default class LocationScreen extends Component {
     const { open, selectedLocation, locationList, isLoading, error } = this.state
 
     return (
-      <Block style={{flex: 1, width: '100%'}}>
+      <SafeAreaView style={{flex: 1, width: '100%'}} edges={['top', 'bottom']}>
+        <Block style={{flex: 1, width: '100%'}}>
           <ImageBackground source={require('../../assets/images/location_bg.png')} resizeMode="cover" style={styles.background}>
             <Block style={styles.backgroundDim} >
               <Image style = {styles.logo} source={require('../../assets/images/logo.png')}/>
@@ -166,7 +168,8 @@ export default class LocationScreen extends Component {
         {error && (
           <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
         )}
-      </Block>
+        </Block>
+      </SafeAreaView>
     );
   }
 }

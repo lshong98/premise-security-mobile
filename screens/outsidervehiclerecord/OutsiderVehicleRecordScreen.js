@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View, Dimensions, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Button, TextInput } from 'react-native-paper';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
@@ -58,10 +59,11 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
   }
 
 
-  render(){    
+  render(){
     return (
-      <KeyboardAvoidingView style={{ flex: 1, flexDirection: 'column',justifyContent: 'center',}} behavior="padding" enabled   keyboardVerticalOffset={100}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+          <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         
         
         <View style={styles.inputContainer}>
@@ -208,17 +210,25 @@ export default class OutsiderVehicleRecordScreen extends React.Component {
               </Button>
             </View>
           </View>
-        </View>    
-      </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     );
   }
 }
   
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  keyboardView: {
+    flex: 1
+  },
   container: {
-    flexGrow: 1, 
-    flexDirection: 'column', 
+    flexGrow: 1,
+    flexDirection: 'column',
     justifyContent: 'space-between'
   },
 

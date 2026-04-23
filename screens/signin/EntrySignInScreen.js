@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Button, TextInput, Switch, Alert } from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import firebase from 'firebase/compat/app';
@@ -254,16 +255,17 @@ export default function EntrySignInScreen({navigation, route}) {
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
-    >
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>PLEASE ENTER DETAILS</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerTitle}>PLEASE ENTER DETAILS</Text>
+        </View>
 
-      <View style={styles.contentContainer}>
+        <View style={styles.contentContainer}>
         <View style={[
           styles.dropdownContainer,
           Platform.OS !== 'android' && { zIndex: 5000 }
@@ -410,7 +412,8 @@ export default function EntrySignInScreen({navigation, route}) {
           </View>
         </View>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -418,6 +421,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff'
+  },
+  flex: {
+    flex: 1,
   },
   contentContainer: {
     flex: 1,

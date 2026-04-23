@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions, TouchableOpacity, ImageBackground, KeyboardAvoidingView, Alert, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Button, TextInput } from 'react-native-paper';
 import DropDownPicker from '../../components/react-native-dropdown-picker/src/index';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -205,8 +206,9 @@ export default function IncidentReportScreen ({navigation}) {
   }
 
   return(
-      <KeyboardAvoidingView style={{ flex: 1, flexDirection: 'column',justifyContent: 'center',}} behavior="padding" enabled   keyboardVerticalOffset={100}>
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false} >
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+          <ScrollView style={styles.container} showsVerticalScrollIndicator={false} >
           {(global.internetConnectivity) ? <View style={styles.cameraContainer}>
             {photo ? (
               <ImageBackground resizeMode='cover' style={{flex: 1}} source={{uri: photo}}>
@@ -306,13 +308,21 @@ export default function IncidentReportScreen ({navigation}) {
               </View>
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
   );
 }
 
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  keyboardView: {
+    flex: 1
+  },
   container: {
     marginHorizontal: 15,
   },

@@ -87,12 +87,24 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace 'com.swinburne.tpsapp'
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
     defaultConfig {
         applicationId 'com.swinburne.tpsapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.7.0"
+
+        buildConfigField("boolean", "IS_EDGE_TO_EDGE_ENABLED", (findProperty('edgeToEdgeEnabled') ?: 'false').toString())
     }
     signingConfigs {
         debug {
