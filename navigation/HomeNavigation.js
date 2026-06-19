@@ -22,6 +22,7 @@ import GuardPatrolScreen from '../screens/guard/GuardPatrolScreen';
 import GuardActivityScreen from '../screens/guard/GuardActivityScreen';
 import IncidentReportScreen from '../screens/guard/IncidentReportScreen';
 import OutsiderVehicleRecordScreen from '../screens/outsidervehiclerecord/OutsiderVehicleRecordScreen';
+// import TestErrorScreen from '../screens/TestErrorScreen'; // Commented out - uncomment to test errors
 
 const Stack = createNativeStackNavigator();
 function GuardStack() {
@@ -153,6 +154,9 @@ function HomeStack(){
           }else if (route.name === 'Guard') {
             iconName = 'shield'
           }
+          // else if (route.name === 'TestError') {
+          //   iconName = 'wrench'
+          // }
 
           // You can return any component that you like here!
           return <SimpleLineIcons name={iconName} size={24} />;
@@ -182,6 +186,7 @@ function HomeStack(){
       <Tab.Screen name="EZSignIn" component={EZSignInScreen} options={{ tabBarLabel: 'EZ Sign In'}} />
       <Tab.Screen name="RollCall" component={RollCallScreen} options={{ tabBarLabel: 'Roll Call'}} />
       <Tab.Screen name="Guard" component={GuardStack} options={{ tabBarLabel: 'Guard'}} listeners={{tabPress: (e) => {resetStack("GuardHome")}}}/>
+      {/* <Tab.Screen name="TestError" component={TestErrorScreen} options={{ tabBarLabel: 'Test'}} /> */}
     </Tab.Navigator>
     </SafeAreaView>
   );

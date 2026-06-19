@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import React, {useCallback, useEffect, useState} from 'react'
-import { Alert, StyleSheet, LogBox, View as RNView, Platform } from 'react-native';
+import { Alert, StyleSheet, LogBox, View as RNView, Platform, AppState } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font'
@@ -15,6 +15,9 @@ import 'firebase/compat/firestore';
 import 'firebase/compat/storage'; // Import Firebase Storage
 import {decode, encode} from 'base-64'
 import _ from 'lodash';
+import ErrorBoundary from './utils/ErrorBoundary';
+import logger from './utils/DebugLogger';
+import DebugMenu from './components/DebugMenu';
 if (!global.btoa) {  global.btoa = encode }
 if (!global.atob) { global.atob = decode }
 
@@ -79,6 +82,10 @@ export default function App(){
   useEffect(()=>{
     async function prepare() {
       try{
+        // Initialize debug logger
+        await logger.initialize();
+        logger.info('APP_INIT', 'App initialization started');
+
         await SplashScreen.preventAutoHideAsync();
         await Font.loadAsync({
           'open-sans-regular': require('./assets/fonts/OpenSans-Regular.ttf'),
@@ -88,20 +95,35 @@ export default function App(){
           'segoe-ui': require('./assets/fonts/SegoeUI.ttf'),
           'segoe-ui-bold': require('./assets/fonts/SegoeUI-Bold.ttf'),
         });
+        logger.info('APP_INIT', 'Fonts loaded successfully');
         setIsLoadingComplete(true);
 
         // Firebase is already initialized above, just setup auth listener
         firebase.auth().onAuthStateChanged(onAuthStateChanged);
       }catch(e){
+        logger.error('APP_INIT', 'Initialization failed', e);
         console.warn(e)
       }
     }
 
     prepare();
+
+    // Track app state changes
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      logger.trackAppState(nextAppState);
+    });
+
+    return () => {
+      subscription?.remove();
+    };
   }, [])
 
   const onAuthStateChanged = (user) => {
+    logger.info('AUTH', 'Auth state changed', { user: user?.email || 'null' });
+
     if (user != null) {
+      logger.trackFirebaseOperation('GET_USER_PERMISSIONS', { email: user.email });
+
       firebase
         .firestore()
         .collection('Accounts')
@@ -109,8 +131,10 @@ export default function App(){
         .get()
         .then((doc) => {
           if (doc.data()?.mobileapp_permission) {
+            logger.info('AUTH', 'User authenticated successfully', { email: user.email });
             setIsAuthenticated(user);
           } else {
+            logger.warn('AUTH', 'User lacks mobile app permission', { email: user.email });
             Alert.alert(
               'User does not have permission to access the mobile app.'
             );
@@ -118,6 +142,7 @@ export default function App(){
           }
         })
         .catch((error) => {
+          logger.trackFirebaseError('GET_USER_PERMISSIONS', error);
           console.error("Firestore error:", error);
           setIsAuthenticated(null);
         })
@@ -125,6 +150,7 @@ export default function App(){
           setIsAuthenticationReady(true);
         });
     } else {
+      logger.info('AUTH', 'No authenticated user');
       setIsAuthenticated(null);
       setIsAuthenticationReady(true);
     }
@@ -146,14 +172,17 @@ export default function App(){
   }
 
     return (
-        <NavigationContainer theme={theme} style={styles.container}  onReady={onLayoutRootView}>
-            {
-            (isAuthenticated || (firebase.auth().currentUser != null)) ? 
-                <HomeNavigationComponent /> 
-            
-            : <AuthNavigationComponent /> 
-            }
-        </NavigationContainer>  
+        <ErrorBoundary>
+          <NavigationContainer theme={theme} style={styles.container}  onReady={onLayoutRootView}>
+              {
+              (isAuthenticated || (firebase.auth().currentUser != null)) ?
+                  <HomeNavigationComponent />
+
+              : <AuthNavigationComponent />
+              }
+          </NavigationContainer>
+          <DebugMenu visible={true} />
+        </ErrorBoundary>
     );
 
 }
