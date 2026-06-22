@@ -135,10 +135,10 @@ export default function PictureSignInScreen({navigation, route}) {
         ],
         { cancelable: false }
       );
-    } else { 
+    } else {
       if (uploading) return; // Prevent multiple uploads
       setUploading(true);
-      
+
       // Set a timeout to handle stalled uploads
       const uploadTimeout = setTimeout(() => {
         if (uploading) {
@@ -151,15 +151,20 @@ export default function PictureSignInScreen({navigation, route}) {
           );
         }
       }, 60000); // 60 second timeout
-      
+
       try {
         let uploadUrl = await uploadImageAsync(resizedPhoto);
         clearTimeout(uploadTimeout);
+
+        // Clean up photo URIs from memory after successful upload
+        setPhoto(null);
+        setResizedPhoto(null);
+
         await submitData(uploadUrl);
       } catch (e) {
         clearTimeout(uploadTimeout);
         setUploading(false);
-        
+
         if (!isShowingError) {
           setIsShowingError(true);
           Alert.alert(
@@ -389,15 +394,15 @@ function uuidv4() {
 }
 
 async function uploadImageAsync(uri) {
+  let blob = null;
   try {
     // First check if we're connected
     const networkState = await NetInfo.fetch();
     if (!networkState.isConnected) {
       throw new Error('No internet connection. Please try again when connected.');
     }
-    
+
     // Use fetch instead of XMLHttpRequest for better compatibility on Android
-    let blob;
     try {
       const response = await fetch(uri);
       blob = await response.blob();
@@ -406,7 +411,7 @@ async function uploadImageAsync(uri) {
       blob = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.timeout = 30000;
-        
+
         xhr.onload = function() {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(xhr.response);
@@ -414,18 +419,18 @@ async function uploadImageAsync(uri) {
             reject(new Error(`Failed to create blob: HTTP status ${xhr.status}`));
           }
         };
-        
+
         xhr.ontimeout = function() {
           reject(new Error('Network request timed out'));
         };
-        
+
         xhr.onerror = function(e) {
           reject(new Error('Network request failed: ' + (e.message || 'Unknown error')));
         };
-        
+
         xhr.responseType = 'blob';
         xhr.open('GET', uri, true);
-        
+
         try {
           xhr.send(null);
         } catch (sendError) {
@@ -436,32 +441,34 @@ async function uploadImageAsync(uri) {
 
     // Create a unique filename
     const filename = 'entries/' + uuidv4() + '.jpg';
-    
+
     const ref = firebase
       .storage()
       .ref()
       .child(filename);
-    
+
     const metadata = {
       contentType: 'image/jpeg',
       cacheControl: 'private, max-age=7200'
     };
-    
+
     // Set upload retry options
     const uploadTask = ref.put(blob, metadata);
-    
+
     // Wait for upload to complete
     const snapshot = await uploadTask;
-    
-    // Close the blob when we're done
-    blob.close();
-    
+
     // Get the download URL
     const downloadURL = await snapshot.ref.getDownloadURL();
-    
+
+    // Clean up blob from memory (React Native blobs don't have .close())
+    blob = null;
+
     return downloadURL;
   } catch (error) {
     console.error('Error uploading image:', error);
+    // Clean up blob on error too
+    blob = null;
     throw new Error('Failed to upload image: ' + error.message);
   }
 }
